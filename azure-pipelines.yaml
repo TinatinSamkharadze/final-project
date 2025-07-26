@@ -117,4 +117,4 @@ stages:
               pathToPublish: 'allure-report'
               artifactName: 'allure-report'
               publishLocation: 'Container'
-            condition: and(always(), succeeded('Generate Allure Report'))
+            condition: always()
