@@ -111,12 +111,12 @@ stages:
           - script: |
               if [ -d "allure-results" ]; then
                 npm install -g allure-commandline
-                allure generate allure-results --clean -o allure-report
+                allure generate allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-report
                 echo "Allure report generated successfully"
               else
                 echo "No allure-results directory found, skipping report generation"
-                mkdir -p allure-report
-                echo "No test results available" > allure-report/index.html
+                mkdir -p $(Build.ArtifactStagingDirectory)/allure-report
+                echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-report/index.html
               fi
             displayName: 'Generate Allure Report'
             condition: always()
@@ -124,7 +124,7 @@ stages:
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Allure Report'
             inputs:
-              pathToPublish: 'allure-report'
+              pathToPublish: '$(Build.ArtifactStagingDirectory)/allure-report'
               artifactName: 'allure-report'
               publishLocation: 'Container'
             condition: always()
