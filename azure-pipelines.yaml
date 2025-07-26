@@ -124,6 +124,8 @@ stages:
               if [ -d "lighthouse-reports" ]; then
                 npm install -g allure-commandline
                 allure generate lighthouse-reports --clean -o $(Build.ArtifactStagingDirectory)/allure-results
+                # Attach Lighthouse report to Allure
+                allure addAttachment 'Lighthouse Report' 'text/html' lighthouse-reports/* --fileType html
                 echo "Allure report generated successfully"
               else
                 echo "No lighthouse-reports directory found, skipping report generation"
