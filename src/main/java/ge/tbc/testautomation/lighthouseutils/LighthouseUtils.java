@@ -1,11 +1,16 @@
 package ge.tbc.testautomation.lighthouseutils;
 
+import io.qameta.allure.Allure;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 
 public class LighthouseUtils {
 
@@ -27,7 +32,6 @@ public class LighthouseUtils {
                     "--quiet"
             };
 
-
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(new File(System.getProperty("user.dir")));
 
@@ -37,6 +41,8 @@ public class LighthouseUtils {
 
             if (exitCode == 0) {
                 System.out.println("Lighthouse HTML report generated: " + reportPath);
+                attachLighthouseReportToAllure(reportPath, testName);
+
                 return reportPath;
             } else {
                 throw new RuntimeException("Lighthouse audit failed with exit code: " + exitCode);
@@ -46,6 +52,25 @@ public class LighthouseUtils {
             System.err.println("Lighthouse audit failed: " + e.getMessage());
             e.printStackTrace();
             return null;
+        }
+    }
+
+    private static void attachLighthouseReportToAllure(String reportPath, String testName) {
+        try {
+            File reportFile = new File(reportPath);
+            if (reportFile.exists()) {
+                byte[] htmlContent = Files.readAllBytes(Paths.get(reportPath));
+                Allure.addAttachment(
+                        testName + " - Lighthouse Report",
+                        "text/html",
+                        new FileInputStream(reportFile),
+                        ".html"
+                );
+
+                System.out.println("Lighthouse report attached to Allure: " + testName);
+            }
+        } catch (IOException e) {
+            System.err.println("Failed to attach Lighthouse report to Allure: " + e.getMessage());
         }
     }
 

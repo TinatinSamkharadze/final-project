@@ -1,5 +1,5 @@
 <suite name="Automation Suite">
-    <test name="UI Tests">
+    <test name="Lighthouse audit tests">
         <packages>
             <package name="ge.tbc.testautomation"/>
         </packages>
