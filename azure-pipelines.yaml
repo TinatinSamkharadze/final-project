@@ -18,15 +18,89 @@ stages:
         timeoutInMinutes: 30
 
         steps:
-          # Node.js, Chrome, Java, Maven steps (same as before)
+          # Install Node.js
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: '18.x'
 
+          # Install Lighthouse CLI
+          - script: |
+              npm install -g lighthouse
+              lighthouse --version
+            displayName: 'Install Lighthouse CLI'
+
+          # Install Chrome Browser
+          - script: |
+              wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+              sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+              sudo apt-get update
+              sudo apt-get install -y google-chrome-stable
+              google-chrome --version
+            displayName: 'Install Chrome Browser'
+
+          # Install Java 17
+          - task: JavaToolInstaller@0
+            displayName: 'Install Java 17'
+            inputs:
+              versionSpec: '17'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
+
+          # Cache Maven Dependencies
+          - task: Cache@2
+            displayName: 'Cache Maven Dependencies'
+            inputs:
+              key: 'maven | "$(Agent.OS)" | **/pom.xml'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+                maven
+              path: $(MAVEN_CACHE_FOLDER)
+
+          # Download Maven Dependencies
+          - task: Maven@4
+            displayName: 'Download Maven Dependencies'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'dependency:resolve'
+              options: '$(MAVEN_OPTS)'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.17'
+
+          # Create Lighthouse Reports Directory
           - script: |
               mkdir -p lighthouse-reports
               chmod 755 lighthouse-reports
             displayName: 'Create Lighthouse Reports Directory'
 
-          # Run tests and generate reports (same as before)
+          # Compile Project
+          - task: Maven@4
+            displayName: 'Compile Project'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'compile test-compile'
+              options: '$(MAVEN_OPTS)'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.17'
 
+          # Run Lighthouse Performance Tests (via Maven)
+          - task: Maven@4
+            displayName: 'Run Lighthouse Performance Tests'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'test'
+              options: '-Dtest=LighthouseTests $(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false'
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.17'
+            env:
+              CI: 'true'
+              LIGHTHOUSE_PATH: 'lighthouse'
+              CHROME_PATH: '/usr/bin/google-chrome'
+              DISPLAY: ':99'
+              PLAYWRIGHT_BROWSERS_PATH: '0'
+
+          # Publish Test Results
           - task: PublishTestResults@2
             displayName: 'Publish Test Results'
             inputs:
@@ -36,6 +110,7 @@ stages:
               testRunTitle: 'Lighthouse Performance Tests'
             condition: always()
 
+          # Publish Lighthouse Reports Artifact
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Lighthouse Reports'
             inputs:
@@ -44,6 +119,7 @@ stages:
               publishLocation: 'Container'
             condition: always()
 
+          # Generate Allure Report
           - script: |
               if [ -d "lighthouse-reports" ]; then
                 npm install -g allure-commandline
@@ -57,11 +133,14 @@ stages:
             displayName: 'Generate Allure Report'
             condition: always()
 
+          # List Contents of Allure Results Directory for Debugging
           - script: |
               echo "Listing contents of allure-results directory"
               ls -R $(Build.ArtifactStagingDirectory)/allure-results
             displayName: 'List Contents of Allure Results Directory'
+            condition: always()
 
+          # Publish Allure Report Artifact
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Allure Report'
             inputs:
