@@ -36,7 +36,6 @@ stages:
               google-chrome --version
             displayName: 'Install Chrome Browser'
 
-          # Changed to Java 17 or 21 (more commonly available and compatible)
           - task: JavaToolInstaller@0
             displayName: 'Install Java 17'
             inputs:
@@ -60,7 +59,7 @@ stages:
               goals: 'dependency:resolve'
               options: '$(MAVEN_OPTS)'
               javaHomeOption: 'JDKVersion'
-              jdkVersionOption: '1.17'  # Updated to match Java version
+              jdkVersionOption: '1.17'
 
           - script: |
               mkdir -p lighthouse-reports

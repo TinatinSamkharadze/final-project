@@ -1,4 +1,8 @@
 <suite name="Automation Suite">
+    <listeners>
+        <listener class-name="io.qameta.allure.testng.AllureTestNg" />
+    </listeners>
+
     <test name="Lighthouse audit tests">
         <packages>
             <package name="ge.tbc.testautomation"/>
