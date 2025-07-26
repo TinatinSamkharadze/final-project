@@ -52,7 +52,7 @@ stages:
                 maven
               path: $(MAVEN_CACHE_FOLDER)
 
-          - task: Maven@3
+          - task: Maven@4
             displayName: 'Download Maven Dependencies'
             inputs:
               mavenPomFile: 'pom.xml'
@@ -66,7 +66,7 @@ stages:
               chmod 755 lighthouse-reports
             displayName: 'Create Lighthouse Reports Directory'
 
-          - task: Maven@3
+          - task: Maven@4
             displayName: 'Run Lighthouse Performance Tests'
             inputs:
               mavenPomFile: 'pom.xml'
@@ -111,4 +111,4 @@ stages:
               pathToPublish: 'allure-report'
               artifactName: 'allure-report'
               publishLocation: 'Container'
-            condition: and(always(), exists('allure-report'))
+            condition: always()
