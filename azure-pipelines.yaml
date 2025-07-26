@@ -81,7 +81,7 @@ stages:
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'test'
-              options: '-Dtest=LighthouseTests $(MAVEN_OPTS) -Dheadless=true'
+              options: '-Dtest=LighthouseTests $(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false'
               testResultsFiles: '**/surefire-reports/TEST-*.xml'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
@@ -89,6 +89,8 @@ stages:
               CI: 'true'
               LIGHTHOUSE_PATH: 'lighthouse'
               CHROME_PATH: '/usr/bin/google-chrome'
+              DISPLAY: ':99'
+              PLAYWRIGHT_BROWSERS_PATH: '0'
 
           - task: PublishTestResults@2
             displayName: 'Publish Test Results'
