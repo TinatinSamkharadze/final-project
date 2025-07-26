@@ -20,30 +20,78 @@ public class LighthouseUtils {
 
             String reportPath = "./lighthouse-reports/" + testName + "-lighthouse.html";
 
-            String lighthousePath = "lighthouse.cmd";
+            // Detect if running in CI or locally
+            boolean isCI = System.getenv("CI") != null || System.getProperty("ci") != null;
+            String lighthousePath = getLighthousePath();
 
-            String[] command = {
-                    lighthousePath,
-                    url,
-                    "--preset=desktop",
-                    "--output=html",
-                    "--output-path=" + reportPath,
-                    "--chrome-flags=--headless --no-sandbox --disable-dev-shm-usage",
-                    "--quiet"
-            };
+            String[] command;
+
+            if (isCI) {
+                // CI environment - use enhanced flags
+                command = new String[]{
+                        lighthousePath,
+                        url,
+                        "--preset=desktop",
+                        "--output=html",
+                        "--output-path=" + reportPath,
+                        "--chrome-flags=--headless --no-sandbox --disable-dev-shm-usage --disable-gpu --remote-debugging-port=9222",
+                        "--max-wait-for-load=30000",
+                        "--timeout=60000",
+                        "--quiet"
+                };
+            } else {
+                // Local environment - simpler flags
+                command = new String[]{
+                        lighthousePath,
+                        url,
+                        "--preset=desktop",
+                        "--output=html",
+                        "--output-path=" + reportPath,
+                        "--chrome-flags=--headless --no-sandbox --disable-dev-shm-usage",
+                        "--quiet"
+                };
+            }
 
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(new File(System.getProperty("user.dir")));
 
-            System.out.println("Running Lighthouse audit for: " + url + " (Desktop)");
+            // Set environment variables only for CI
+            if (isCI) {
+                pb.environment().put("CI", "true");
+                pb.environment().put("CHROME_PATH", getChromePath());
+            }
+
+            System.out.println("Running Lighthouse audit for: " + url + " (Desktop) - " + (isCI ? "CI Mode" : "Local Mode"));
+            System.out.println("Lighthouse command: " + String.join(" ", command));
+
             Process process = pb.start();
-            int exitCode = process.waitFor();
+
+            // Capture output for debugging
+            captureProcessOutput(process);
+
+            // Different timeout for local vs CI
+            int timeoutSeconds = isCI ? 90 : 60;
+            boolean finished = process.waitFor(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS);
+
+            if (!finished) {
+                process.destroyForcibly();
+                throw new RuntimeException("Lighthouse audit timed out after " + timeoutSeconds + " seconds");
+            }
+
+            int exitCode = process.exitValue();
 
             if (exitCode == 0) {
                 System.out.println("Lighthouse HTML report generated: " + reportPath);
-                attachLighthouseReportToAllure(reportPath, testName);
 
-                return reportPath;
+                // Verify file was created
+                File reportFile = new File(reportPath);
+                if (reportFile.exists() && reportFile.length() > 0) {
+                    System.out.println("Report file size: " + reportFile.length() + " bytes");
+                    attachLighthouseReportToAllure(reportPath, testName);
+                    return reportPath;
+                } else {
+                    throw new RuntimeException("Report file was not created or is empty");
+                }
             } else {
                 throw new RuntimeException("Lighthouse audit failed with exit code: " + exitCode);
             }
@@ -52,6 +100,72 @@ public class LighthouseUtils {
             System.err.println("Lighthouse audit failed: " + e.getMessage());
             e.printStackTrace();
             return null;
+        }
+    }
+
+    // Helper method to get correct Lighthouse path based on OS
+    private static String getLighthousePath() {
+        String os = System.getProperty("os.name").toLowerCase();
+        String lighthousePath = System.getenv("LIGHTHOUSE_PATH");
+
+        if (lighthousePath != null && !lighthousePath.isEmpty()) {
+            return lighthousePath;
+        }
+
+        if (os.contains("win")) {
+            return "lighthouse.cmd";
+        } else {
+            return "lighthouse";
+        }
+    }
+
+    // Helper method to get Chrome path based on OS
+    private static String getChromePath() {
+        String chromePath = System.getenv("CHROME_PATH");
+        if (chromePath != null && !chromePath.isEmpty()) {
+            return chromePath;
+        }
+
+        String os = System.getProperty("os.name").toLowerCase();
+        if (os.contains("win")) {
+            return "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+        } else if (os.contains("mac")) {
+            return "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+        } else {
+            return "/usr/bin/google-chrome";
+        }
+    }
+
+    // Helper method to capture process output for debugging
+    private static void captureProcessOutput(Process process) {
+        try {
+            // Capture stdout
+            new Thread(() -> {
+                try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(process.getInputStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.out.println("Lighthouse stdout: " + line);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error reading stdout: " + e.getMessage());
+                }
+            }).start();
+
+            // Capture stderr
+            new Thread(() -> {
+                try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(process.getErrorStream()))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        System.err.println("Lighthouse stderr: " + line);
+                    }
+                } catch (Exception e) {
+                    System.err.println("Error reading stderr: " + e.getMessage());
+                }
+            }).start();
+        } catch (Exception e) {
+            System.err.println("Error setting up process output capture: " + e.getMessage());
         }
     }
 
@@ -73,7 +187,6 @@ public class LighthouseUtils {
             System.err.println("Failed to attach Lighthouse report to Allure: " + e.getMessage());
         }
     }
-
 
     public static int getSpecificScore(String reportPath, String category) {
         try {
@@ -112,5 +225,4 @@ public class LighthouseUtils {
 
         return -1;
     }
-
 }

@@ -1,0 +1,221 @@
+trigger:
+  - main
+  - develop
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  MAVEN_CACHE_FOLDER: $(Pipeline.Workspace)/.m2/repository
+  MAVEN_OPTS: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
+
+stages:
+  - stage: LighthousePerformanceTests
+    displayName: 'Lighthouse Performance Testing'
+    jobs:
+      - job: RunLighthouseTests
+        displayName: 'Run Lighthouse Performance Tests'
+        timeoutInMinutes: 30
+
+        steps:
+          # Install Node.js (required for Lighthouse)
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: '18.x'
+
+          # Install Lighthouse CLI globally
+          - script: |
+              npm install -g lighthouse
+              lighthouse --version
+            displayName: 'Install Lighthouse CLI'
+
+          # Install Chrome browser (required for Lighthouse)
+          - script: |
+              wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
+              sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
+              sudo apt-get update
+              sudo apt-get install -y google-chrome-stable
+              google-chrome --version
+            displayName: 'Install Chrome Browser'
+
+          # Set up Java
+          - task: JavaToolInstaller@0
+            displayName: 'Install Java 11'
+            inputs:
+              versionSpec: '11'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
+
+          # Cache Maven dependencies
+          - task: Cache@2
+            displayName: 'Cache Maven Dependencies'
+            inputs:
+              key: 'maven | "$(Agent.OS)" | **/pom.xml'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+                maven
+              path: $(MAVEN_CACHE_FOLDER)
+
+          # Download Maven dependencies
+          - task: Maven@3
+            displayName: 'Download Maven Dependencies'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'dependency:resolve'
+              options: '$(MAVEN_OPTS)'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.11'
+
+          # Create lighthouse reports directory
+          - script: |
+              mkdir -p lighthouse-reports
+              chmod 755 lighthouse-reports
+            displayName: 'Create Lighthouse Reports Directory'
+
+          # Run Lighthouse Performance Tests
+          - task: Maven@3
+            displayName: 'Run Lighthouse Performance Tests'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'test'
+              options: '-Dtest=*Performance* $(MAVEN_OPTS) -Dheadless=true'
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.11'
+            env:
+              LIGHTHOUSE_PATH: 'lighthouse'
+              CHROME_PATH: '/usr/bin/google-chrome'
+
+          # Publish Test Results
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              failTaskOnFailedTests: true
+              testRunTitle: 'Lighthouse Performance Tests'
+            condition: always()
+
+          # Publish Lighthouse HTML Reports as Artifacts
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Lighthouse Reports'
+            inputs:
+              pathToPublish: 'lighthouse-reports'
+              artifactName: 'lighthouse-reports'
+              publishLocation: 'Container'
+            condition: always()
+
+          # Generate Allure Report (if using Allure)
+          - script: |
+              if [ -d "allure-results" ]; then
+                npm install -g allure-commandline
+                allure generate allure-results --clean -o allure-report
+              fi
+            displayName: 'Generate Allure Report'
+            condition: always()
+
+          # Publish Allure Report
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Allure Report'
+            inputs:
+              pathToPublish: 'allure-report'
+              artifactName: 'allure-report'
+              publishLocation: 'Container'
+            condition: and(always(), exists('allure-report'))
+
+---
+
+# Alternative Windows-based pipeline
+trigger:
+  - main
+  - develop
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  MAVEN_CACHE_FOLDER: $(Pipeline.Workspace)/.m2/repository
+  MAVEN_OPTS: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
+
+stages:
+  - stage: LighthousePerformanceTests
+    displayName: 'Lighthouse Performance Testing (Windows)'
+    jobs:
+      - job: RunLighthouseTestsWindows
+        displayName: 'Run Lighthouse Performance Tests on Windows'
+        timeoutInMinutes: 30
+
+        steps:
+          # Install Node.js
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: '18.x'
+
+          # Install Lighthouse CLI
+          - script: |
+              npm install -g lighthouse
+              lighthouse --version
+            displayName: 'Install Lighthouse CLI'
+
+          # Set up Java
+          - task: JavaToolInstaller@0
+            displayName: 'Install Java 11'
+            inputs:
+              versionSpec: '11'
+              jdkArchitectureOption: 'x64'
+              jdkSourceOption: 'PreInstalled'
+
+          # Cache Maven dependencies
+          - task: Cache@2
+            displayName: 'Cache Maven Dependencies'
+            inputs:
+              key: 'maven | "$(Agent.OS)" | **/pom.xml'
+              restoreKeys: |
+                maven | "$(Agent.OS)"
+                maven
+              path: $(MAVEN_CACHE_FOLDER)
+
+          # Create lighthouse reports directory
+          - script: |
+              if not exist lighthouse-reports mkdir lighthouse-reports
+            displayName: 'Create Lighthouse Reports Directory'
+
+          # Update your LighthouseUtils for Windows
+          - powershell: |
+              Write-Host "Chrome is pre-installed on Windows agents"
+              Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\App Paths\chrome.exe" | Select-Object -ExpandProperty "(default)"
+            displayName: 'Check Chrome Installation'
+
+          # Run Lighthouse Performance Tests
+          - task: Maven@3
+            displayName: 'Run Lighthouse Performance Tests'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'test'
+              options: '-Dtest=*Performance* $(MAVEN_OPTS) -Dheadless=true'
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.11'
+            env:
+              LIGHTHOUSE_PATH: 'lighthouse.cmd'
+
+          # Publish Test Results
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              failTaskOnFailedTests: true
+              testRunTitle: 'Lighthouse Performance Tests'
+            condition: always()
+
+          # Publish Lighthouse Reports
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Lighthouse Reports'
+            inputs:
+              pathToPublish: 'lighthouse-reports'
+              artifactName: 'lighthouse-reports'
+              publishLocation: 'Container'
+            condition: always()
