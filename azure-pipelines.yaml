@@ -89,7 +89,7 @@ stages:
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'test'
-              options: '-Dtest=LighthouseTests $(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false'
+              options: '-Dtest=ge.tbc.testautomation.LighthouseTests $(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false'
               testResultsFiles: '**/surefire-reports/TEST-*.xml'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'

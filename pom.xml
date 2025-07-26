@@ -108,7 +108,8 @@
                     <!-- Includes tests with names like PerformanceTest or Test -->
                     <includes>
                         <include>**/*Performance*.java</include>
-                        <include>**/*Test*.java</include>
+                        <include>**/*Tests*.java</include>
+                        <include>**/LighthouseTests.java</include>
                     </includes>
                     <!-- Ensure the reports are generated in surefire-reports directory -->
                     <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
