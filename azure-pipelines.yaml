@@ -105,12 +105,12 @@ stages:
             displayName: 'Publish Test Results'
             inputs:
               testResultsFormat: 'JUnit'
-              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
               failTaskOnFailedTests: true
               testRunTitle: 'Lighthouse Performance Tests'
             condition: always()
 
-          # Publish Lighthouse Reports Artifact
+            # Publish Lighthouse Reports Artifact
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Lighthouse Reports'
             inputs:
