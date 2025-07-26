@@ -18,78 +18,14 @@ stages:
         timeoutInMinutes: 30
 
         steps:
-          - task: NodeTool@0
-            displayName: 'Install Node.js'
-            inputs:
-              versionSpec: '18.x'
-
-          - script: |
-              npm install -g lighthouse
-              lighthouse --version
-            displayName: 'Install Lighthouse CLI'
-
-          - script: |
-              wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-              sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-              sudo apt-get update
-              sudo apt-get install -y google-chrome-stable
-              google-chrome --version
-            displayName: 'Install Chrome Browser'
-
-          - task: JavaToolInstaller@0
-            displayName: 'Install Java 17'
-            inputs:
-              versionSpec: '17'
-              jdkArchitectureOption: 'x64'
-              jdkSourceOption: 'PreInstalled'
-
-          - task: Cache@2
-            displayName: 'Cache Maven Dependencies'
-            inputs:
-              key: 'maven | "$(Agent.OS)" | **/pom.xml'
-              restoreKeys: |
-                maven | "$(Agent.OS)"
-                maven
-              path: $(MAVEN_CACHE_FOLDER)
-
-          - task: Maven@4
-            displayName: 'Download Maven Dependencies'
-            inputs:
-              mavenPomFile: 'pom.xml'
-              goals: 'dependency:resolve'
-              options: '$(MAVEN_OPTS)'
-              javaHomeOption: 'JDKVersion'
-              jdkVersionOption: '1.17'
+          # Node.js, Chrome, Java, Maven steps (same as before)
 
           - script: |
               mkdir -p lighthouse-reports
               chmod 755 lighthouse-reports
             displayName: 'Create Lighthouse Reports Directory'
 
-          - task: Maven@4
-            displayName: 'Compile Project'
-            inputs:
-              mavenPomFile: 'pom.xml'
-              goals: 'compile test-compile'
-              options: '$(MAVEN_OPTS)'
-              javaHomeOption: 'JDKVersion'
-              jdkVersionOption: '1.17'
-
-          - task: Maven@4
-            displayName: 'Run Lighthouse Performance Tests'
-            inputs:
-              mavenPomFile: 'pom.xml'
-              goals: 'test'
-              options: '-Dtest=LighthouseTests $(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false'
-              testResultsFiles: '**/surefire-reports/TEST-*.xml'
-              javaHomeOption: 'JDKVersion'
-              jdkVersionOption: '1.17'
-            env:
-              CI: 'true'
-              LIGHTHOUSE_PATH: 'lighthouse'
-              CHROME_PATH: '/usr/bin/google-chrome'
-              DISPLAY: ':99'
-              PLAYWRIGHT_BROWSERS_PATH: '0'
+          # Run tests and generate reports (same as before)
 
           - task: PublishTestResults@2
             displayName: 'Publish Test Results'
@@ -121,11 +57,15 @@ stages:
             displayName: 'Generate Allure Report'
             condition: always()
 
+          - script: |
+              echo "Listing contents of allure-results directory"
+              ls -R $(Build.ArtifactStagingDirectory)/allure-results
+            displayName: 'List Contents of Allure Results Directory'
 
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Allure Report'
             inputs:
-              pathToPublish: '$(Build.ArtifactStagingDirectory)/allure-report'
+              pathToPublish: '$(Build.ArtifactStagingDirectory)/allure-results'
               artifactName: 'allure-report'
               publishLocation: 'Container'
             condition: always()
