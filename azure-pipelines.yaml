@@ -36,10 +36,11 @@ stages:
               google-chrome --version
             displayName: 'Install Chrome Browser'
 
+          # Changed to Java 17 or 21 (more commonly available and compatible)
           - task: JavaToolInstaller@0
-            displayName: 'Install Java 11'
+            displayName: 'Install Java 17'
             inputs:
-              versionSpec: '11'
+              versionSpec: '17'
               jdkArchitectureOption: 'x64'
               jdkSourceOption: 'PreInstalled'
 
@@ -59,7 +60,7 @@ stages:
               goals: 'dependency:resolve'
               options: '$(MAVEN_OPTS)'
               javaHomeOption: 'JDKVersion'
-              jdkVersionOption: '1.11'
+              jdkVersionOption: '1.17'  # Updated to match Java version
 
           - script: |
               mkdir -p lighthouse-reports
@@ -74,7 +75,7 @@ stages:
               options: '-Dtest=*Performance* $(MAVEN_OPTS) -Dheadless=true'
               testResultsFiles: '**/surefire-reports/TEST-*.xml'
               javaHomeOption: 'JDKVersion'
-              jdkVersionOption: '1.11'
+              jdkVersionOption: '1.17'  # Updated to match Java version
             env:
               CI: 'true'
               LIGHTHOUSE_PATH: 'lighthouse'
@@ -101,6 +102,11 @@ stages:
               if [ -d "allure-results" ]; then
                 npm install -g allure-commandline
                 allure generate allure-results --clean -o allure-report
+                echo "Allure report generated successfully"
+              else
+                echo "No allure-results directory found, skipping report generation"
+                mkdir -p allure-report
+                echo "No test results available" > allure-report/index.html
               fi
             displayName: 'Generate Allure Report'
             condition: always()
@@ -111,4 +117,4 @@ stages:
               pathToPublish: 'allure-report'
               artifactName: 'allure-report'
               publishLocation: 'Container'
-            condition: always()
+            condition: and(always(), succeeded('Generate Allure Report'))
