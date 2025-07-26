@@ -4,10 +4,12 @@ import com.microsoft.playwright.Page;
 import com.microsoft.playwright.assertions.PlaywrightAssertions;
 import com.microsoft.playwright.options.LoadState;
 import ge.tbc.testautomation.pages.HomePage;
-import ge.tbc.testautomation.util.LighthouseUtils;
+import ge.tbc.testautomation.lighthouseutils.LighthouseUtils;
+import io.qameta.allure.Allure;
 import io.qameta.allure.Step;
 import org.testng.asserts.SoftAssert;
 
+import java.io.FileInputStream;
 import java.util.regex.Pattern;
 
 import static com.microsoft.playwright.assertions.PlaywrightAssertions.assertThat;
@@ -80,7 +82,17 @@ public class HomeSteps {
         String currentUrl = page.url();
         String testName = "TC_CURR_001_CommercialRates";
 
-        LighthouseUtils.runPerformanceAudit(currentUrl, testName);
+        String reportPath = LighthouseUtils.runPerformanceAudit(currentUrl, testName);
+
+        if (reportPath != null) {
+            try {
+                Allure.addAttachment("Lighthouse Report - " + testName, "text/html", new FileInputStream(reportPath), ".html");
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
         return this;
     }
+
 }

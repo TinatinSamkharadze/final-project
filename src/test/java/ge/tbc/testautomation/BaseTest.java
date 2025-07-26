@@ -7,8 +7,6 @@ import org.testng.asserts.SoftAssert;
 
 import java.util.Arrays;
 
-import static ge.tbc.testautomation.data.Constants.TBC_BANK_BASE_URL;
-
 public class BaseTest {
     public Playwright playwright;
     public Browser browser;
@@ -38,7 +36,6 @@ public class BaseTest {
         browserContext = browser.newContext();
         page = browserContext.newPage();
         this.softAssert = new SoftAssert();
-        page.navigate(TBC_BANK_BASE_URL);
         this.homeSteps = new HomeSteps(page);
     }
 

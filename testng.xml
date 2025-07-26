@@ -1,7 +1,7 @@
 <suite name="Automation Suite">
     <test name="UI Tests">
-        <classes>
-            <class name="ge.tbc.testautomation.CurrencyExchangeRatesTest"/>
-        </classes>
+        <packages>
+            <package name="ge.tbc.testautomation"/>
+        </packages>
     </test>
 </suite>
