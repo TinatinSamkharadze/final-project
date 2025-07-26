@@ -68,14 +68,23 @@ stages:
             displayName: 'Create Lighthouse Reports Directory'
 
           - task: Maven@4
+            displayName: 'Compile Project'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'compile test-compile'
+              options: '$(MAVEN_OPTS)'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.17'
+
+          - task: Maven@4
             displayName: 'Run Lighthouse Performance Tests'
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'test'
-              options: '-Dtest=*Performance* $(MAVEN_OPTS) -Dheadless=true'
+              options: '-Dtest=LighthouseTests $(MAVEN_OPTS) -Dheadless=true'
               testResultsFiles: '**/surefire-reports/TEST-*.xml'
               javaHomeOption: 'JDKVersion'
-              jdkVersionOption: '1.17'  # Updated to match Java version
+              jdkVersionOption: '1.17'
             env:
               CI: 'true'
               LIGHTHOUSE_PATH: 'lighthouse'
