@@ -109,17 +109,18 @@ stages:
             condition: always()
 
           - script: |
-              if [ -d "allure-results" ]; then
+              if [ -d "lighthouse-reports" ]; then
                 npm install -g allure-commandline
-                allure generate allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-report
+                allure generate lighthouse-reports --clean -o $(Build.ArtifactStagingDirectory)/allure-results
                 echo "Allure report generated successfully"
               else
-                echo "No allure-results directory found, skipping report generation"
-                mkdir -p $(Build.ArtifactStagingDirectory)/allure-report
-                echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-report/index.html
+                echo "No lighthouse-reports directory found, skipping report generation"
+                mkdir -p $(Build.ArtifactStagingDirectory)/allure-results
+                echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-results/index.html
               fi
             displayName: 'Generate Allure Report'
             condition: always()
+
 
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Allure Report'

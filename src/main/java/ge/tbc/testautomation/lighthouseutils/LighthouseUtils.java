@@ -188,6 +188,7 @@ public class LighthouseUtils {
         }
     }
 
+
     public static int getSpecificScore(String reportPath, String category) {
         try {
             File inputFile = new File(reportPath);
