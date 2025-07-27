@@ -89,8 +89,7 @@ stages:
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'test'
-              options: '-Dtest=ge.tbc.testautomation.LighthouseTests $(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false'
-              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              options: '-Dtest=ge.tbc.testautomation.LighthouseTests $(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false'  # You can remove this if not needed for your test framework
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
             env:
@@ -100,26 +99,16 @@ stages:
               DISPLAY: ':99'
               PLAYWRIGHT_BROWSERS_PATH: '0'
 
-          # Publish Test Results
-          - task: PublishTestResults@2
-            displayName: 'Publish Test Results'
-            inputs:
-              testResultsFormat: 'JUnit' # If you still want JUnit format
-              testResultsFiles: '**/target/allure-results/*.xml'  # Ensure the Allure results XML files are present
-              failTaskOnFailedTests: true
-              testRunTitle: 'Lighthouse Performance Tests'
-            condition: always()
-
-          # Publish Lighthouse Reports Artifact
+          # Publish Lighthouse HTML Reports as Artifacts
           - task: PublishBuildArtifacts@1
-            displayName: 'Publish Lighthouse Reports'
+            displayName: 'Publish Lighthouse Reports Artifact'
             inputs:
-              pathToPublish: 'lighthouse-reports'
+              pathToPublish: 'lighthouse-reports'  # Path to the directory containing the Lighthouse HTML reports
               artifactName: 'lighthouse-reports'
-              publishLocation: 'Container'
+              publishLocation: 'pipeline'
             condition: always()
 
-          # Generate Allure Report
+          # Generate Allure Report from Allure results (if needed)
           - script: |
               if [ -d "$(Build.SourcesDirectory)/target/allure-results" ]; then
                 npm install -g allure-commandline
@@ -132,13 +121,6 @@ stages:
                 echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-results/index.html
               fi
             displayName: 'Generate Allure Report'
-            condition: always()
-
-          # List Contents of Allure Results Directory for Debugging
-          - script: |
-              echo "Listing contents of allure-results directory"
-              ls -R $(Build.ArtifactStagingDirectory)/allure-results
-            displayName: 'List Contents of Allure Results Directory'
             condition: always()
 
           # Publish Allure Report Artifact
