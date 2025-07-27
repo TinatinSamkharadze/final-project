@@ -75,6 +75,7 @@ stages:
 
           # Create allure-results Directory
           - script: |
+              echo "=== Creating allure-results directory ==="
               mkdir -p target/allure-results
               chmod 755 target/allure-results
             displayName: 'Create Allure Results Directory'
@@ -143,6 +144,8 @@ stages:
 
           # Generate Allure Report from Allure results
           - script: |
+              echo "=== Checking allure-results directory before generation ==="
+              ls -la target/allure-results
               if [ -d "$(Build.SourcesDirectory)/target/allure-results" ]; then
                 npm install -g allure-commandline
                 allure generate $(Build.SourcesDirectory)/target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
