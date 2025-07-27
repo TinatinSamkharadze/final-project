@@ -89,7 +89,7 @@ stages:
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'test'
-              options: '-Dtest=ge.tbc.testautomation.LighthouseTests $(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false'  # You can remove this if not needed for your test framework
+              options: '-Dtest=ge.tbc.testautomation.LighthouseTests $(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false -Dlighthouse.reports.dir=lighthouse-reports'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
             env:
@@ -98,6 +98,38 @@ stages:
               CHROME_PATH: '/usr/bin/google-chrome'
               DISPLAY: ':99'
               PLAYWRIGHT_BROWSERS_PATH: '0'
+
+          # Debug: Check lighthouse-reports directory and contents
+          - script: |
+              echo "=== Current working directory ==="
+              pwd
+              echo "=== Listing project root ==="
+              ls -la .
+              echo "=== Checking lighthouse-reports directory ==="
+              if [ -d "lighthouse-reports" ]; then
+                echo "lighthouse-reports directory exists"
+                echo "Directory permissions:"
+                ls -ld lighthouse-reports
+                echo "Contents of lighthouse-reports:"
+                ls -la lighthouse-reports/
+                echo "File count in lighthouse-reports:"
+                find lighthouse-reports -type f | wc -l
+                echo "HTML files in lighthouse-reports:"
+                find lighthouse-reports -name "*.html" -type f
+              else
+                echo "lighthouse-reports directory does NOT exist"
+              fi
+              echo "=== Searching for any HTML files in project ==="
+              find . -name "*.html" -type f 2>/dev/null | head -20
+              echo "=== Maven test results ==="
+              if [ -d "target/surefire-reports" ]; then
+                echo "Surefire reports exist:"
+                ls -la target/surefire-reports/
+              else
+                echo "No surefire reports found"
+              fi
+            displayName: 'Debug: Check Lighthouse Reports Location'
+            condition: always()
 
           # Publish Lighthouse HTML Reports as Artifacts
           - task: PublishBuildArtifacts@1
