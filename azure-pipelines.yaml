@@ -83,62 +83,37 @@ stages:
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
 
-          # FIXED: Run Lighthouse Performance Tests with TestNG XML
+          # Run Lighthouse Performance Tests with TestNG
           - task: Maven@4
-            displayName: 'Run Lighthouse Performance Tests'
+            displayName: 'Run TestNG Tests with Allure'
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'clean test'
-              options: '$(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false -DsuiteXmlFile=testng.xml -Dlighthouse.reports.dir=$(Build.SourcesDirectory)/lighthouse-reports -Dallure.results.directory=target/allure-results'
+              options: '-DsuiteXmlFile=testng.xml -Dallure.results.directory=$(Build.SourcesDirectory)/target/allure-results'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
-            env:
-              CI: 'true'
-              LIGHTHOUSE_PATH: 'lighthouse'
-              CHROME_PATH: '/usr/bin/google-chrome'
-              DISPLAY: ':99'
-              PLAYWRIGHT_BROWSERS_PATH: '0'
 
-          # Debug: Check lighthouse-reports directory and contents
+          # Debug: Check allure-results directory and lighthouse-reports content
           - script: |
-              echo "=== Current working directory ==="
-              pwd
-              echo "=== Listing project root ==="
-              ls -la .
+              echo "=== Checking allure-results directory ==="
+              if [ -d "$(Build.SourcesDirectory)/target/allure-results" ]; then
+                echo "Allure results directory exists"
+                ls -la $(Build.SourcesDirectory)/target/allure-results
+                echo "HTML files in allure-results:"
+                find $(Build.SourcesDirectory)/target/allure-results -name "*.xml" -type f
+              else
+                echo "No allure-results directory found"
+              fi
               echo "=== Checking lighthouse-reports directory ==="
-              if [ -d "lighthouse-reports" ]; then
-                echo "lighthouse-reports directory exists"
-                echo "Directory permissions:"
-                ls -ld lighthouse-reports
-                echo "Contents of lighthouse-reports:"
-                ls -la lighthouse-reports/
-                echo "File count in lighthouse-reports:"
-                find lighthouse-reports -type f | wc -l
+              if [ -d "$(Build.SourcesDirectory)/lighthouse-reports" ]; then
+                echo "Lighthouse reports directory exists"
+                ls -la $(Build.SourcesDirectory)/lighthouse-reports
                 echo "HTML files in lighthouse-reports:"
-                find lighthouse-reports -name "*.html" -type f
+                find $(Build.SourcesDirectory)/lighthouse-reports -name "*.html" -type f
               else
-                echo "lighthouse-reports directory does NOT exist"
+                echo "No lighthouse-reports directory found"
               fi
-              echo "=== Maven test results ==="
-              if [ -d "target/surefire-reports" ]; then
-                echo "Surefire reports exist:"
-                ls -la target/surefire-reports/
-                echo "=== TestNG Results ==="
-                find target/surefire-reports -name "*.xml" -exec echo "Found: {}" \; -exec grep -c "test " {} \;
-              else
-                echo "No surefire reports found"
-              fi
-              echo "=== Allure results ==="
-              if [ -d "target/allure-results" ]; then
-                echo "Allure results exist:"
-                ls -la target/allure-results/
-                echo "Allure files count:"
-                find target/allure-results -type f | wc -l
-              else
-                echo "No allure-results found"
-              fi
-            displayName: 'Debug: Check Test Configuration'
-            condition: always()
+            displayName: 'Debug: Check Directories'
 
           # Publish Lighthouse HTML Reports as Artifacts
           - task: PublishBuildArtifacts@1
@@ -165,7 +140,7 @@ stages:
 
           # Publish Allure Report Artifact
           - task: PublishBuildArtifacts@1
-            displayName: 'Publish Allure Report'
+            displayName: 'Publish Allure Report Artifact'
             inputs:
               targetPath: '$(Build.ArtifactStagingDirectory)/allure-results'
               artifactName: 'allure-report'

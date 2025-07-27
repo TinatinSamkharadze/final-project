@@ -11,7 +11,11 @@ public class Constants {
     SEO = "seo",
     HOME_PAGE_AUDIT = "HomePageAudit",
     LOANS_PAGE_AUDIT = "LoansPageAudit",
-    TREASURY_PRODUCTS_PAGE_AUDIT = "TreasuryProductsPageAudit";
+    TREASURY_PRODUCTS_PAGE_AUDIT = "TreasuryProductsPageAudit",
+            FIRST_CONTENTFUL_PAINT = "first-contentful-paint",
+            LARGEST_CONTENTFUL_PAINT = "largest-contentful-paint",
+            TIME_TO_INTERACTIVE = "time-to-interactive",
+            COMULATIVE_LAYOUT_SHIFT = "cumulative-layout-shift";
 
     public static final int MIN_PERFORMANCE_SCORE = 45,
             MIN_ACCESSIBILITY_SCORE = 50,
