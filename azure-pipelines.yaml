@@ -197,3 +197,4 @@ stages:
               allureVersion: '2.27.0'
               testResultsDir: '$(Build.ArtifactStagingDirectory)/allure-results'
             condition: always()
+            continueOnError: true
