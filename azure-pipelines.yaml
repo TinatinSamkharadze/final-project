@@ -73,6 +73,12 @@ stages:
               chmod 755 lighthouse-reports
             displayName: 'Create Lighthouse Reports Directory'
 
+          # Create allure-results Directory
+          - script: |
+              mkdir -p target/allure-results
+              chmod 755 target/allure-results
+            displayName: 'Create Allure Results Directory'
+
           # Compile Project
           - task: Maven@4
             displayName: 'Compile Project'
