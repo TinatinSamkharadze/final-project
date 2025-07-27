@@ -88,8 +88,8 @@ stages:
             displayName: 'Run Lighthouse Performance Tests'
             inputs:
               mavenPomFile: 'pom.xml'
-              goals: 'test'
-              options: '$(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false -Dlighthouse.reports.dir=lighthouse-reports'
+              goals: 'clean test'
+              options: '$(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false -Dlighthouse.reports.dir=lighthouse-reports -Dallure.results.directory=target/allure-results'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
             env:
@@ -135,9 +135,16 @@ stages:
                 echo "Allure files count:"
                 find target/allure-results -type f | wc -l
               else
-                echo "No allure-results found"
+                echo "No allure-results found - Check if your tests have @Test annotations and Allure dependencies"
               fi
-            displayName: 'Debug: Check Lighthouse Reports Location'
+              echo "=== TestNG XML file ==="
+              if [ -f "testng.xml" ]; then
+                echo "testng.xml exists:"
+                cat testng.xml
+              else
+                echo "testng.xml not found"
+              fi
+            displayName: 'Debug: Check Test Configuration'
             condition: always()
 
           # Publish Lighthouse HTML Reports as Artifacts
