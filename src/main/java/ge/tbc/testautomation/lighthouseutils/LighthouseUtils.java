@@ -19,15 +19,12 @@ public class LighthouseUtils {
             new File("./lighthouse-reports").mkdirs();
 
             String reportPath = "./lighthouse-reports/" + testName + "-lighthouse.html";
-
-            // Detect if running in CI or locally
             boolean isCI = System.getenv("CI") != null || System.getProperty("ci") != null;
             String lighthousePath = getLighthousePath();
 
             String[] command;
 
             if (isCI) {
-                // CI environment - use enhanced flags
                 command = new String[]{
                         lighthousePath,
                         url,
@@ -40,7 +37,6 @@ public class LighthouseUtils {
                         "--quiet"
                 };
             } else {
-                // Local environment - simpler flags
                 command = new String[]{
                         lighthousePath,
                         url,
@@ -55,7 +51,6 @@ public class LighthouseUtils {
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.directory(new File(System.getProperty("user.dir")));
 
-            // Set environment variables only for CI
             if (isCI) {
                 pb.environment().put("CI", "true");
                 pb.environment().put("CHROME_PATH", getChromePath());
@@ -66,10 +61,10 @@ public class LighthouseUtils {
 
             Process process = pb.start();
 
-            // Capture output for debugging
+
             captureProcessOutput(process);
 
-            // Different timeout for local vs CI
+
             int timeoutSeconds = isCI ? 90 : 60;
             boolean finished = process.waitFor(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS);
 
@@ -83,7 +78,7 @@ public class LighthouseUtils {
             if (exitCode == 0) {
                 System.out.println("Lighthouse HTML report generated: " + reportPath);
 
-                // Verify file was created
+
                 File reportFile = new File(reportPath);
                 if (reportFile.exists() && reportFile.length() > 0) {
                     System.out.println("Report file size: " + reportFile.length() + " bytes");
@@ -103,7 +98,7 @@ public class LighthouseUtils {
         }
     }
 
-    // Helper method to get correct Lighthouse path based on OS
+
     private static String getLighthousePath() {
         String os = System.getProperty("os.name").toLowerCase();
         String lighthousePath = System.getenv("LIGHTHOUSE_PATH");
@@ -119,7 +114,7 @@ public class LighthouseUtils {
         }
     }
 
-    // Helper method to get Chrome path based on OS
+
     private static String getChromePath() {
         String chromePath = System.getenv("CHROME_PATH");
         if (chromePath != null && !chromePath.isEmpty()) {
@@ -136,10 +131,8 @@ public class LighthouseUtils {
         }
     }
 
-    // Helper method to capture process output for debugging
     private static void captureProcessOutput(Process process) {
         try {
-            // Capture stdout
             new Thread(() -> {
                 try (java.io.BufferedReader reader = new java.io.BufferedReader(
                         new java.io.InputStreamReader(process.getInputStream()))) {
@@ -152,7 +145,6 @@ public class LighthouseUtils {
                 }
             }).start();
 
-            // Capture stderr
             new Thread(() -> {
                 try (java.io.BufferedReader reader = new java.io.BufferedReader(
                         new java.io.InputStreamReader(process.getErrorStream()))) {

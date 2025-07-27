@@ -13,6 +13,8 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <aspectj.version>1.9.24</aspectj.version>
+        <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
+        <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
     </properties>
     <dependencies>
         <dependency>
@@ -103,21 +105,20 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
-                <version>3.0.0</version>
+                <version>${maven-surefire-plugin.version}</version>
                 <configuration>
-                    <!-- Includes tests with names like PerformanceTest or Test -->
-                    <includes>
-                        <include>**/*Performance*.java</include>
-                        <include>**/*Tests*.java</include>
-                        <include>**/LighthouseTests.java</include>
-                    </includes>
-                    <!-- Ensure the reports are generated in surefire-reports directory -->
-                    <reportsDirectory>${project.build.directory}/surefire-reports</reportsDirectory>
-                    <!-- Include the JUnit XML report format -->
-                    <testFailureIgnore>false</testFailureIgnore>
-                    <forkCount>1</forkCount>
-                    <reuseForks>false</reuseForks>
+                    <argLine>
+                        -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
+                        -Dallure.results.directory=target/allure-results
+                    </argLine>
                 </configuration>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.aspectj</groupId>
+                        <artifactId>aspectjweaver</artifactId>
+                        <version>${aspectj.version}</version>
+                    </dependency>
+                </dependencies>
             </plugin>
 
             <plugin>
