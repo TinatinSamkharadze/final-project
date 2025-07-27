@@ -130,7 +130,7 @@ stages:
               echo "=== Checking target directory ==="
               ls -la target
               echo "=== Checking target/allure-results ==="
-              ls -la target/allure-results
+              ls -la target/allure-results || echo "target/allure-results does not exist"
             displayName: 'Debug: Check Lighthouse and Allure Results Directories'
             condition: always()
 
@@ -146,7 +146,7 @@ stages:
           # Generate Allure Report from Allure results
           - script: |
               echo "=== Checking allure-results directory before generation ==="
-              ls -la target/allure-results
+              ls -la target/allure-results || echo "target/allure-results does not exist"
               if [ -d "target/allure-results" ]; then
                 npm install -g allure-commandline
                 allure generate target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
