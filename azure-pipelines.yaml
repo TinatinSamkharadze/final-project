@@ -73,12 +73,13 @@ stages:
               chmod 755 lighthouse-reports
             displayName: 'Create Lighthouse Reports Directory'
 
-          # Create allure-results Directory
+          # Create allure-results Directory with explicit permissions
           - script: |
               echo "=== Creating allure-results directory ==="
               mkdir -p target/allure-results
-              chmod 755 target/allure-results
+              chmod -R 777 target/allure-results
             displayName: 'Create Allure Results Directory'
+            continueOnError: true
 
           # Compile Project
           - task: Maven@4
@@ -146,9 +147,9 @@ stages:
           - script: |
               echo "=== Checking allure-results directory before generation ==="
               ls -la target/allure-results
-              if [ -d "$(Build.SourcesDirectory)/target/allure-results" ]; then
+              if [ -d "target/allure-results" ]; then
                 npm install -g allure-commandline
-                allure generate $(Build.SourcesDirectory)/target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
+                allure generate target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
                 echo "Allure report generated successfully"
               else
                 echo "No allure-results directory found, skipping report generation"
@@ -172,6 +173,6 @@ stages:
             displayName: 'Publish Allure Report to Azure DevOps'
             inputs:
               allureVersion: '2.27.0'
-              testResultsDir: '$(Build.SourcesDirectory)/target/allure-results'
+              testResultsDir: 'target/allure-results'  # Use relative path
             condition: always()
             continueOnError: true
