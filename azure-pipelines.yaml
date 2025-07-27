@@ -83,13 +83,13 @@ stages:
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
 
-          # Run Lighthouse Performance Tests (via Maven)
+          # FIXED: Run Lighthouse Performance Tests with TestNG XML
           - task: Maven@4
             displayName: 'Run Lighthouse Performance Tests'
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'clean test'
-              options: '$(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false -Dlighthouse.reports.dir=lighthouse-reports -Dallure.results.directory=target/allure-results'
+              options: '$(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false -DsuiteXmlFile=testng.xml -Dlighthouse.reports.dir=$(Build.SourcesDirectory)/lighthouse-reports -Dallure.results.directory=target/allure-results'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
             env:
@@ -119,12 +119,12 @@ stages:
               else
                 echo "lighthouse-reports directory does NOT exist"
               fi
-              echo "=== Searching for any HTML files in project ==="
-              find . -name "*.html" -type f 2>/dev/null | head -20
               echo "=== Maven test results ==="
               if [ -d "target/surefire-reports" ]; then
                 echo "Surefire reports exist:"
                 ls -la target/surefire-reports/
+                echo "=== TestNG Results ==="
+                find target/surefire-reports -name "*.xml" -exec echo "Found: {}" \; -exec grep -c "test " {} \;
               else
                 echo "No surefire reports found"
               fi
@@ -135,14 +135,7 @@ stages:
                 echo "Allure files count:"
                 find target/allure-results -type f | wc -l
               else
-                echo "No allure-results found - Check if your tests have @Test annotations and Allure dependencies"
-              fi
-              echo "=== TestNG XML file ==="
-              if [ -f "testng.xml" ]; then
-                echo "testng.xml exists:"
-                cat testng.xml
-              else
-                echo "testng.xml not found"
+                echo "No allure-results found"
               fi
             displayName: 'Debug: Check Test Configuration'
             condition: always()
@@ -156,34 +149,16 @@ stages:
               publishLocation: 'Container'
             condition: always()
 
-          # Generate Allure Report from Allure results (if needed)
+          # Generate Allure Report from Allure results
           - script: |
               if [ -d "$(Build.SourcesDirectory)/target/allure-results" ]; then
                 npm install -g allure-commandline
                 allure generate $(Build.SourcesDirectory)/target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
-              
-                # Copy Lighthouse reports to Allure results for attachment
-                if [ -d "lighthouse-reports" ] && [ "$(ls -A lighthouse-reports)" ]; then
-                  echo "Copying Lighthouse reports to Allure results..."
-                  mkdir -p $(Build.ArtifactStagingDirectory)/allure-results/lighthouse-reports
-                  cp lighthouse-reports/*.html $(Build.ArtifactStagingDirectory)/allure-results/lighthouse-reports/
-                  echo "Lighthouse reports copied successfully"
-                else
-                  echo "No Lighthouse reports found to attach"
-                fi
-              
                 echo "Allure report generated successfully"
               else
                 echo "No allure-results directory found, skipping report generation"
                 mkdir -p $(Build.ArtifactStagingDirectory)/allure-results
-                echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-results/index.html
-              
-                # Still copy Lighthouse reports even if no Allure results
-                if [ -d "lighthouse-reports" ] && [ "$(ls -A lighthouse-reports)" ]; then
-                  echo "Copying Lighthouse reports to empty Allure results..."
-                  mkdir -p $(Build.ArtifactStagingDirectory)/allure-results/lighthouse-reports
-                  cp lighthouse-reports/*.html $(Build.ArtifactStagingDirectory)/allure-results/lighthouse-reports/
-                fi
+                echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-results/no-results.txt
               fi
             displayName: 'Generate Allure Report'
             condition: always()
@@ -202,6 +177,6 @@ stages:
             displayName: 'Publish Allure Report to Azure DevOps'
             inputs:
               allureVersion: '2.27.0'
-              testResultsDir: '$(Build.ArtifactStagingDirectory)/allure-results'
+              testResultsDir: '$(Build.SourcesDirectory)/target/allure-results'
             condition: always()
             continueOnError: true

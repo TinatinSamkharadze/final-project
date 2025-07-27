@@ -8,19 +8,41 @@ import org.jsoup.select.Elements;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 
 public class LighthouseUtils {
 
     public static String runPerformanceAudit(String url, String testName) {
         try {
-            new File("./lighthouse-reports").mkdirs();
+            // Create reports directory with absolute path
+            String baseDir = System.getProperty("user.dir");
+            String reportsDir = baseDir + File.separator + "lighthouse-reports";
+            File reportsDirFile = new File(reportsDir);
 
-            String reportPath = "./lighthouse-reports/" + testName + "-lighthouse.html";
+            if (!reportsDirFile.exists()) {
+                boolean created = reportsDirFile.mkdirs();
+                System.out.println("Created lighthouse-reports directory: " + created + " at " + reportsDir);
+            }
+
+            // Use absolute path for report
+            String reportPath = reportsDir + File.separator + testName + "-lighthouse.html";
+            File reportFile = new File(reportPath);
+
+            // Delete existing report if it exists
+            if (reportFile.exists()) {
+                reportFile.delete();
+                System.out.println("Deleted existing report: " + reportPath);
+            }
+
             boolean isCI = System.getenv("CI") != null || System.getProperty("ci") != null;
             String lighthousePath = getLighthousePath();
+
+            System.out.println("Working directory: " + baseDir);
+            System.out.println("Reports directory: " + reportsDir);
+            System.out.println("Report will be saved to: " + reportPath);
+            System.out.println("Running in CI mode: " + isCI);
 
             String[] command;
 
@@ -49,7 +71,7 @@ public class LighthouseUtils {
             }
 
             ProcessBuilder pb = new ProcessBuilder(command);
-            pb.directory(new File(System.getProperty("user.dir")));
+            pb.directory(new File(baseDir));
 
             if (isCI) {
                 pb.environment().put("CI", "true");
@@ -60,10 +82,7 @@ public class LighthouseUtils {
             System.out.println("Lighthouse command: " + String.join(" ", command));
 
             Process process = pb.start();
-
-
             captureProcessOutput(process);
-
 
             int timeoutSeconds = isCI ? 90 : 60;
             boolean finished = process.waitFor(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS);
@@ -76,15 +95,41 @@ public class LighthouseUtils {
             int exitCode = process.exitValue();
 
             if (exitCode == 0) {
-                System.out.println("Lighthouse HTML report generated: " + reportPath);
+                System.out.println("Lighthouse command completed successfully");
 
+                // Wait for file to be fully written
+                int maxWaitAttempts = 10;
+                int waitAttempt = 0;
 
-                File reportFile = new File(reportPath);
+                while (waitAttempt < maxWaitAttempts) {
+                    if (reportFile.exists() && reportFile.length() > 1000) { // Minimum reasonable file size
+                        break;
+                    }
+                    Thread.sleep(1000); // Wait 1 second
+                    waitAttempt++;
+                    System.out.println("Waiting for report file to be written... attempt " + (waitAttempt + 1));
+                }
+
                 if (reportFile.exists() && reportFile.length() > 0) {
-                    System.out.println("Report file size: " + reportFile.length() + " bytes");
+                    System.out.println("Lighthouse HTML report generated successfully:");
+                    System.out.println("  - Path: " + reportPath);
+                    System.out.println("  - Size: " + reportFile.length() + " bytes");
+                    System.out.println("  - Exists: " + reportFile.exists());
+                    System.out.println("  - Readable: " + reportFile.canRead());
+
+                    // Attach to Allure with improved error handling
                     attachLighthouseReportToAllure(reportPath, testName);
+
                     return reportPath;
                 } else {
+                    System.err.println("Report file was not created or is empty:");
+                    System.err.println("  - Expected path: " + reportPath);
+                    System.err.println("  - File exists: " + reportFile.exists());
+                    System.err.println("  - File size: " + (reportFile.exists() ? reportFile.length() : "N/A"));
+
+                    // List files in lighthouse-reports directory
+                    listDirectoryContents(reportsDirFile);
+
                     throw new RuntimeException("Report file was not created or is empty");
                 }
             } else {
@@ -94,16 +139,42 @@ public class LighthouseUtils {
         } catch (Exception e) {
             System.err.println("Lighthouse audit failed: " + e.getMessage());
             e.printStackTrace();
+
+            // Add error information to Allure
+            Allure.addAttachment(
+                    testName + " - Lighthouse Execution Error",
+                    "text/plain",
+                    "Lighthouse audit failed: " + e.getMessage() +
+                            "\nWorking directory: " + System.getProperty("user.dir") +
+                            "\nCI mode: " + (System.getenv("CI") != null || System.getProperty("ci") != null)
+            );
+
             return null;
         }
     }
 
+    private static void listDirectoryContents(File directory) {
+        try {
+            System.out.println("Contents of " + directory.getAbsolutePath() + ":");
+            File[] files = directory.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    System.out.println("  - " + file.getName() + " (" + file.length() + " bytes)");
+                }
+            } else {
+                System.out.println("  Directory is empty or cannot be read");
+            }
+        } catch (Exception e) {
+            System.err.println("Error listing directory contents: " + e.getMessage());
+        }
+    }
 
     private static String getLighthousePath() {
         String os = System.getProperty("os.name").toLowerCase();
         String lighthousePath = System.getenv("LIGHTHOUSE_PATH");
 
         if (lighthousePath != null && !lighthousePath.isEmpty()) {
+            System.out.println("Using LIGHTHOUSE_PATH from environment: " + lighthousePath);
             return lighthousePath;
         }
 
@@ -114,10 +185,10 @@ public class LighthouseUtils {
         }
     }
 
-
     private static String getChromePath() {
         String chromePath = System.getenv("CHROME_PATH");
         if (chromePath != null && !chromePath.isEmpty()) {
+            System.out.println("Using CHROME_PATH from environment: " + chromePath);
             return chromePath;
         }
 
@@ -163,29 +234,120 @@ public class LighthouseUtils {
 
     private static void attachLighthouseReportToAllure(String reportPath, String testName) {
         try {
-            File reportFile = new File(reportPath);
-            if (reportFile.exists()) {
-                byte[] htmlContent = Files.readAllBytes(Paths.get(reportPath));
+            Path path = Paths.get(reportPath);
+            File reportFile = path.toFile();
+
+            System.out.println("Attempting to attach Lighthouse report to Allure:");
+            System.out.println("  - Report path: " + reportPath);
+            System.out.println("  - Absolute path: " + path.toAbsolutePath());
+            System.out.println("  - File exists: " + Files.exists(path));
+            System.out.println("  - File size: " + (Files.exists(path) ? reportFile.length() + " bytes" : "N/A"));
+            System.out.println("  - File readable: " + (Files.exists(path) ? reportFile.canRead() : "N/A"));
+
+            if (Files.exists(path) && reportFile.length() > 0) {
+
+                // Method 1: Try with FileInputStream (your original approach)
+                try (FileInputStream fileInputStream = new FileInputStream(reportFile)) {
+                    Allure.addAttachment(
+                            testName + " - Lighthouse Report",
+                            "text/html",
+                            fileInputStream,
+                            ".html"
+                    );
+                    System.out.println("✓ Lighthouse report attached to Allure successfully using FileInputStream: " + testName);
+                } catch (Exception e) {
+                    System.err.println("✗ FileInputStream method failed: " + e.getMessage());
+
+                    // Method 2: Fallback to byte array approach
+                    try {
+                        String htmlContent = new String(Files.readAllBytes(path));
+                        Allure.addAttachment(
+                                testName + " - Lighthouse Report",
+                                "text/html",
+                                htmlContent,
+                                ".html"
+                        );
+                        System.out.println("✓ Lighthouse report attached to Allure successfully using byte array: " + testName);
+                    } catch (Exception e2) {
+                        System.err.println("✗ Byte array method also failed: " + e2.getMessage());
+                        throw e2;
+                    }
+                }
+
+                // Also attach a summary with file info
                 Allure.addAttachment(
-                        testName + " - Lighthouse Report",
-                        "text/html",
-                        new FileInputStream(reportFile),
-                        ".html"
+                        testName + " - Report Info",
+                        "text/plain",
+                        "Report generated successfully\n" +
+                                "Path: " + reportPath + "\n" +
+                                "Size: " + reportFile.length() + " bytes\n" +
+                                "Generated at: " + new java.util.Date()
                 );
 
-                System.out.println("Lighthouse report attached to Allure: " + testName);
+            } else {
+                String errorMsg = "Lighthouse report file does not exist, is empty, or cannot be read\n" +
+                        "Path: " + reportPath + "\n" +
+                        "Absolute path: " + path.toAbsolutePath() + "\n" +
+                        "File exists: " + Files.exists(path) + "\n" +
+                        "File size: " + (Files.exists(path) ? reportFile.length() + " bytes" : "N/A") + "\n" +
+                        "Working directory: " + System.getProperty("user.dir");
+
+                System.err.println(errorMsg);
+
+                // List parent directory contents for debugging
+                File parentDir = reportFile.getParentFile();
+                if (parentDir != null && parentDir.exists()) {
+                    System.err.println("Contents of parent directory (" + parentDir.getAbsolutePath() + "):");
+                    File[] files = parentDir.listFiles();
+                    if (files != null) {
+                        for (File file : files) {
+                            System.err.println("  - " + file.getName() + " (" + file.length() + " bytes)");
+                        }
+                    }
+                }
+
+                // Add debug info to Allure
+                Allure.addAttachment(
+                        testName + " - Lighthouse Report (Missing)",
+                        "text/plain",
+                        errorMsg
+                );
             }
-        } catch (IOException e) {
-            System.err.println("Failed to attach Lighthouse report to Allure: " + e.getMessage());
+        } catch (Exception e) {
+            String errorDetails = "Failed to attach Lighthouse report to Allure: " + e.getMessage() +
+                    "\nReport path: " + reportPath +
+                    "\nWorking directory: " + System.getProperty("user.dir") +
+                    "\nException type: " + e.getClass().getSimpleName();
+
+            System.err.println(errorDetails);
+            e.printStackTrace();
+
+            // Add error details to Allure report
+            Allure.addAttachment(
+                    testName + " - Lighthouse Attachment Error",
+                    "text/plain",
+                    errorDetails + "\n\nStack trace:\n" + getStackTraceAsString(e)
+            );
         }
     }
 
+    private static String getStackTraceAsString(Exception e) {
+        java.io.StringWriter sw = new java.io.StringWriter();
+        java.io.PrintWriter pw = new java.io.PrintWriter(sw);
+        e.printStackTrace(pw);
+        return sw.toString();
+    }
 
     public static int getSpecificScore(String reportPath, String category) {
         try {
             File inputFile = new File(reportPath);
-            Document doc = Jsoup.parse(inputFile, "UTF-8", "");
 
+            if (!inputFile.exists()) {
+                System.err.println("Report file does not exist for score extraction: " + reportPath);
+                return -1;
+            }
+
+            Document doc = Jsoup.parse(inputFile, "UTF-8", "");
             Elements scripts = doc.select("script");
             String lighthouseJson = null;
 
@@ -209,11 +371,14 @@ public class LighthouseUtils {
                     double score = json.getJSONObject("categories")
                             .getJSONObject(category)
                             .getDouble("score");
-                    return (int) Math.round(score * 100);
+                    int finalScore = (int) Math.round(score * 100);
+                    System.out.println("Extracted " + category + " score: " + finalScore);
+                    return finalScore;
                 }
             }
 
         } catch (Exception e) {
+            System.err.println("Error extracting score for " + category + " from " + reportPath + ": " + e.getMessage());
         }
 
         return -1;
