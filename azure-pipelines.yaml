@@ -156,5 +156,5 @@ stages:
             displayName: 'Publish Allure Report to Azure DevOps'
             inputs:
               allureVersion: '1.4.6'  # Specify the Allure version you are using
-              testResultsDir: '$(Build.SourcesDirectory)/target/allure-results'  # Allure results directory for the generated report
+              testResultsDir: '$(Build.ArtifactStagingDirectory)/allure-results'
             condition: always()
