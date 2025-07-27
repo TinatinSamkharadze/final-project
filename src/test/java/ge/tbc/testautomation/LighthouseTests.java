@@ -24,10 +24,23 @@ public class LighthouseTests extends BaseTest {
             int bestPracticesScore = getSpecificScore(reportPath, BEST_PRACTICES);
             int seoScore = getSpecificScore(reportPath, SEO);
 
+        int fcp = getSpecificScore(reportPath, "first-contentful-paint");
+        int lcp = getSpecificScore(reportPath, "largest-contentful-paint");
+        int tti = getSpecificScore(reportPath, "time-to-interactive");
+        double cls = getSpecificScore(reportPath, "cumulative-layout-shift");
             softAssert.assertTrue(performanceScore >= MIN_PERFORMANCE_SCORE);
             softAssert.assertTrue(accessibilityScore > MIN_ACCESSIBILITY_SCORE);
             softAssert.assertTrue(bestPracticesScore > MIN_BEST_PRACTICES_SCORE);
             softAssert.assertTrue(seoScore > MIN_SEO_SCORE);
+
+        softAssert.assertTrue(fcp <= MAX_FCP_TIME,
+                "First Contentful Paint (FCP) is above the acceptable threshold.");
+        softAssert.assertTrue(lcp <= MAX_LCP_TIME,
+                "Largest Contentful Paint (LCP) is above the acceptable threshold.");
+        softAssert.assertTrue(tti <= MAX_TTI_TIME,
+                "Time to Interactive (TTI) is above the acceptable threshold.");
+        softAssert.assertTrue(cls <= MAX_CLS_VALUE,
+                "Cumulative Layout Shift (CLS) is above the acceptable threshold.");
 
     }
 

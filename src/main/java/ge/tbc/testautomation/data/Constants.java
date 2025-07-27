@@ -16,8 +16,11 @@ public class Constants {
     public static final int MIN_PERFORMANCE_SCORE = 45,
             MIN_ACCESSIBILITY_SCORE = 50,
             MIN_BEST_PRACTICES_SCORE = 90,
-            MIN_SEO_SCORE = 90;
-
+            MIN_SEO_SCORE = 90,
+            MAX_FCP_TIME = 1800,
+            MAX_LCP_TIME = 2500,
+            MAX_TTI_TIME = 5000; // Maximum TTI time in milliseconds (5 seconds)
+    public static final double MAX_CLS_VALUE = 0.1;
 
     public static final int WIDTH_FOR_DESKTOP = 1920,
             HEIGHT_FOR_DESKTOP = 1080,
