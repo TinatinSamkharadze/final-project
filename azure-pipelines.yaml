@@ -100,12 +100,11 @@ stages:
               DISPLAY: ':99'
               PLAYWRIGHT_BROWSERS_PATH: '0'
 
-          # Publish Test Results
           - task: PublishTestResults@2
             displayName: 'Publish Test Results'
             inputs:
-              testResultsFormat: 'JUnit'
-              testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
+              testResultsFormat: 'JUnit' # If you still want JUnit format (it can be Allure too, but test format would be XML)
+              testResultsFiles: '**/target/allure-results/*.xml'  # Update path to Allure results directory
               failTaskOnFailedTests: true
               testRunTitle: 'Lighthouse Performance Tests'
             condition: always()
@@ -141,12 +140,19 @@ stages:
               ls -R $(Build.ArtifactStagingDirectory)/allure-results
             displayName: 'List Contents of Allure Results Directory'
             condition: always()
+  # Publish Allure Report Artifact
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Allure Report'
+    inputs:
+      targetPath: '$(Build.SourcesDirectory)/target/allure-results'  # The correct path to your Allure results
+      artifactName: 'allure-report'
+      publishLocation: 'pipeline'  # To publish the artifact to the pipeline
+    condition: always()
 
-          # Publish Allure Report Artifact
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publish Allure Report'
-            inputs:
-              targetPath: 'allure-report'
-              artifactName: 'allure-report'
-              publishLocation: 'pipeline'
-            condition: always()
+  # Publish Allure Report using the Azure DevOps extension
+  - task: PublishAllureReport@1
+    displayName: 'Publish Allure Report to Azure DevOps'
+    inputs:
+      allureVersion: '1.4.6'  # Specify the Allure version you are using
+      testResultsDir: '$(Build.SourcesDirectory)/target/allure-results'  # Allure results directory for the generated report
+    condition: always()
