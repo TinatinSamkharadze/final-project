@@ -140,19 +140,21 @@ stages:
               ls -R $(Build.ArtifactStagingDirectory)/allure-results
             displayName: 'List Contents of Allure Results Directory'
             condition: always()
-  # Publish Allure Report Artifact
-  - task: PublishBuildArtifacts@1
-    displayName: 'Publish Allure Report'
-    inputs:
-      targetPath: '$(Build.SourcesDirectory)/target/allure-results'  # The correct path to your Allure results
-      artifactName: 'allure-report'
-      publishLocation: 'pipeline'  # To publish the artifact to the pipeline
-    condition: always()
 
-  # Publish Allure Report using the Azure DevOps extension
-  - task: PublishAllureReport@1
-    displayName: 'Publish Allure Report to Azure DevOps'
-    inputs:
-      allureVersion: '1.4.6'  # Specify the Allure version you are using
-      testResultsDir: '$(Build.SourcesDirectory)/target/allure-results'  # Allure results directory for the generated report
-    condition: always()
+          # Publish Allure Report Artifact
+          # Publish Allure Report Artifact
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Allure Report'
+            inputs:
+              targetPath: '$(Build.SourcesDirectory)/target/allure-results'  # The correct path to your Allure results
+              artifactName: 'allure-report'
+              publishLocation: 'pipeline'  # To publish the artifact to the pipeline
+            condition: always()
+
+          # Publish Allure Report using the Azure DevOps extension
+          - task: PublishAllureReport@1
+            displayName: 'Publish Allure Report to Azure DevOps'
+            inputs:
+              allureVersion: '1.4.6'  # Specify the Allure version you are using
+              testResultsDir: '$(Build.SourcesDirectory)/target/allure-results'  # Allure results directory for the generated report
+            condition: always()
