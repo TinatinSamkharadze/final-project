@@ -155,6 +155,6 @@ stages:
           - task: PublishAllureReport@1
             displayName: 'Publish Allure Report to Azure DevOps'
             inputs:
-              allureVersion: '1.4.6'  # Specify the Allure version you are using
+              allureVersion: '2.27.0'  # Specify the Allure version you are using
               testResultsDir: '$(Build.ArtifactStagingDirectory)/allure-results'
             condition: always()
