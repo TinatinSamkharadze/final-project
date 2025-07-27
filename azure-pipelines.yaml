@@ -135,9 +135,9 @@ stages:
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Lighthouse Reports Artifact'
             inputs:
-              pathToPublish: 'lighthouse-reports'  # Path to the directory containing the Lighthouse HTML reports
+              pathToPublish: '$(Build.SourcesDirectory)/lighthouse-reports'
               artifactName: 'lighthouse-reports'
-              publishLocation: 'pipeline'
+              publishLocation: 'Container'
             condition: always()
 
           # Generate Allure Report from Allure results (if needed)
