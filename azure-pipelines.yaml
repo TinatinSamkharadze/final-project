@@ -145,12 +145,29 @@ stages:
               if [ -d "$(Build.SourcesDirectory)/target/allure-results" ]; then
                 npm install -g allure-commandline
                 allure generate $(Build.SourcesDirectory)/target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
-                allure addAttachment 'Lighthouse Report' 'text/html' lighthouse-reports/* --fileType html
+              
+                # Copy Lighthouse reports to Allure results for attachment
+                if [ -d "lighthouse-reports" ] && [ "$(ls -A lighthouse-reports)" ]; then
+                  echo "Copying Lighthouse reports to Allure results..."
+                  mkdir -p $(Build.ArtifactStagingDirectory)/allure-results/lighthouse-reports
+                  cp lighthouse-reports/*.html $(Build.ArtifactStagingDirectory)/allure-results/lighthouse-reports/
+                  echo "Lighthouse reports copied successfully"
+                else
+                  echo "No Lighthouse reports found to attach"
+                fi
+              
                 echo "Allure report generated successfully"
               else
                 echo "No allure-results directory found, skipping report generation"
                 mkdir -p $(Build.ArtifactStagingDirectory)/allure-results
                 echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-results/index.html
+              
+                # Still copy Lighthouse reports even if no Allure results
+                if [ -d "lighthouse-reports" ] && [ "$(ls -A lighthouse-reports)" ]; then
+                  echo "Copying Lighthouse reports to empty Allure results..."
+                  mkdir -p $(Build.ArtifactStagingDirectory)/allure-results/lighthouse-reports
+                  cp lighthouse-reports/*.html $(Build.ArtifactStagingDirectory)/allure-results/lighthouse-reports/
+                fi
               fi
             displayName: 'Generate Allure Report'
             condition: always()
