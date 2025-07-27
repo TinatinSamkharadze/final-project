@@ -100,16 +100,17 @@ stages:
               DISPLAY: ':99'
               PLAYWRIGHT_BROWSERS_PATH: '0'
 
+          # Publish Test Results
           - task: PublishTestResults@2
             displayName: 'Publish Test Results'
             inputs:
-              testResultsFormat: 'JUnit' # If you still want JUnit format (it can be Allure too, but test format would be XML)
-              testResultsFiles: '**/target/allure-results/*.xml'  # Update path to Allure results directory
+              testResultsFormat: 'JUnit' # If you still want JUnit format
+              testResultsFiles: '**/target/allure-results/*.xml'  # Ensure the Allure results XML files are present
               failTaskOnFailedTests: true
               testRunTitle: 'Lighthouse Performance Tests'
             condition: always()
 
-            # Publish Lighthouse Reports Artifact
+          # Publish Lighthouse Reports Artifact
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Lighthouse Reports'
             inputs:
@@ -120,14 +121,13 @@ stages:
 
           # Generate Allure Report
           - script: |
-              if [ -d "lighthouse-reports" ]; then
+              if [ -d "$(Build.SourcesDirectory)/target/allure-results" ]; then
                 npm install -g allure-commandline
-                allure generate lighthouse-reports --clean -o $(Build.ArtifactStagingDirectory)/allure-results
-                # Attach Lighthouse report to Allure
+                allure generate $(Build.SourcesDirectory)/target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
                 allure addAttachment 'Lighthouse Report' 'text/html' lighthouse-reports/* --fileType html
                 echo "Allure report generated successfully"
               else
-                echo "No lighthouse-reports directory found, skipping report generation"
+                echo "No allure-results directory found, skipping report generation"
                 mkdir -p $(Build.ArtifactStagingDirectory)/allure-results
                 echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-results/index.html
               fi
@@ -142,19 +142,18 @@ stages:
             condition: always()
 
           # Publish Allure Report Artifact
-          # Publish Allure Report Artifact
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Allure Report'
             inputs:
-              targetPath: '$(Build.SourcesDirectory)/target/allure-results'  # The correct path to your Allure results
+              targetPath: '$(Build.ArtifactStagingDirectory)/allure-results'
               artifactName: 'allure-report'
-              publishLocation: 'pipeline'  # To publish the artifact to the pipeline
+              publishLocation: 'pipeline'
             condition: always()
 
           # Publish Allure Report using the Azure DevOps extension
           - task: PublishAllureReport@1
             displayName: 'Publish Allure Report to Azure DevOps'
             inputs:
-              allureVersion: '2.27.0'  # Specify the Allure version you are using
+              allureVersion: '2.27.0'
               testResultsDir: '$(Build.ArtifactStagingDirectory)/allure-results'
             condition: always()
