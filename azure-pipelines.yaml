@@ -146,7 +146,8 @@ stages:
           - task: PublishBuildArtifacts@1
             displayName: 'Publish Allure Report'
             inputs:
-              pathToPublish: '$(Build.ArtifactStagingDirectory)/allure-results'
+              pathToPublish: '$(Build.SourcesDirectory)/target/allure-results'
+              targetPath: 'allure-report'
               artifactName: 'allure-report'
-              publishLocation: 'Container'
+              publishLocation: 'pipeline'
             condition: always()
