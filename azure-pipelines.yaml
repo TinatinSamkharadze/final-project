@@ -16,6 +16,7 @@ stages:
       - job: RunLighthouseTests
         displayName: 'Run Lighthouse Performance Tests'
         timeoutInMinutes: 30
+
         steps:
           # Install Node.js
           - task: NodeTool@0
@@ -31,7 +32,7 @@ stages:
 
           # Install Chrome Browser
           - script: |
-              wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add - 
+              wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
               sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
               sudo apt-get update
               sudo apt-get install -y google-chrome-stable
@@ -66,31 +67,116 @@ stages:
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
 
-          # Run TestNG Tests
+          # Create Lighthouse Reports Directory
+          - script: |
+              mkdir -p lighthouse-reports
+              chmod 755 lighthouse-reports
+            displayName: 'Create Lighthouse Reports Directory'
+
+          # Compile Project
+          - task: Maven@4
+            displayName: 'Compile Project'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'compile test-compile'
+              options: '$(MAVEN_OPTS)'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.17'
+
+          # FIXED: Run Lighthouse Performance Tests with TestNG XML
           - task: Maven@4
             displayName: 'Run Lighthouse Performance Tests'
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'clean test'
-              options: '-DsuiteXmlFile=testng.xml -Dallure.results.directory=$(Build.SourcesDirectory)/target/allure-results'
+              options: '$(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false -DsuiteXmlFile=testng.xml -Dlighthouse.reports.dir=$(Build.SourcesDirectory)/lighthouse-reports -Dallure.results.directory=target/allure-results'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
+            env:
+              CI: 'true'
+              LIGHTHOUSE_PATH: 'lighthouse'
+              CHROME_PATH: '/usr/bin/google-chrome'
+              DISPLAY: ':99'
+              PLAYWRIGHT_BROWSERS_PATH: '0'
 
-          # Create Allure Results Directory (if it doesn't exist)
+          # Debug: Check lighthouse-reports directory and contents
           - script: |
-              mkdir -p $(Build.SourcesDirectory)/target/allure-results
-              chmod 755 $(Build.SourcesDirectory)/target/allure-results
-            displayName: 'Create Allure Results Directory'
+              echo "=== Current working directory ==="
+              pwd
+              echo "=== Listing project root ==="
+              ls -la .
+              echo "=== Checking lighthouse-reports directory ==="
+              if [ -d "lighthouse-reports" ]; then
+                echo "lighthouse-reports directory exists"
+                echo "Directory permissions:"
+                ls -ld lighthouse-reports
+                echo "Contents of lighthouse-reports:"
+                ls -la lighthouse-reports/
+                echo "File count in lighthouse-reports:"
+                find lighthouse-reports -type f | wc -l
+                echo "HTML files in lighthouse-reports:"
+                find lighthouse-reports -name "*.html" -type f
+              else
+                echo "lighthouse-reports directory does NOT exist"
+              fi
+              echo "=== Maven test results ==="
+              if [ -d "target/surefire-reports" ]; then
+                echo "Surefire reports exist:"
+                ls -la target/surefire-reports/
+                echo "=== TestNG Results ==="
+                find target/surefire-reports -name "*.xml" -exec echo "Found: {}" \; -exec grep -c "test " {} \;
+              else
+                echo "No surefire reports found"
+              fi
+              echo "=== Allure results ==="
+              if [ -d "target/allure-results" ]; then
+                echo "Allure results exist:"
+                ls -la target/allure-results/
+                echo "Allure files count:"
+                find target/allure-results -type f | wc -l
+              else
+                echo "No allure-results found"
+              fi
+            displayName: 'Debug: Check Test Configuration'
+            condition: always()
 
-          # Generate Allure Report
-          - script: |
-              allure generate $(Build.SourcesDirectory)/target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
-            displayName: 'Generate Allure Report'
-
-          # Publish Allure Report as Artifact
+          # Publish Lighthouse HTML Reports as Artifacts
           - task: PublishBuildArtifacts@1
-            displayName: 'Publish Allure Report Artifact'
+            displayName: 'Publish Lighthouse Reports Artifact'
             inputs:
-              pathToPublish: '$(Build.ArtifactStagingDirectory)/allure-results'
-              artifactName: 'allure-reports'
+              pathToPublish: '$(Build.SourcesDirectory)/lighthouse-reports'
+              artifactName: 'lighthouse-reports'
               publishLocation: 'Container'
+            condition: always()
+
+          # Generate Allure Report from Allure results
+          - script: |
+              if [ -d "$(Build.SourcesDirectory)/target/allure-results" ]; then
+                npm install -g allure-commandline
+                allure generate $(Build.SourcesDirectory)/target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
+                echo "Allure report generated successfully"
+              else
+                echo "No allure-results directory found, skipping report generation"
+                mkdir -p $(Build.ArtifactStagingDirectory)/allure-results
+                echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-results/no-results.txt
+              fi
+            displayName: 'Generate Allure Report'
+            condition: always()
+
+          # Publish Allure Report Artifact
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Allure Report'
+            inputs:
+              targetPath: '$(Build.ArtifactStagingDirectory)/allure-results'
+              artifactName: 'allure-report'
+              publishLocation: 'pipeline'
+            condition: always()
+
+          # Publish Allure Report using the Azure DevOps extension
+          - task: PublishAllureReport@1
+            displayName: 'Publish Allure Report to Azure DevOps'
+            inputs:
+              allureVersion: '2.27.0'
+              testResultsDir: '$(Build.SourcesDirectory)/target/allure-results'
+            condition: always()
+            continueOnError: true
