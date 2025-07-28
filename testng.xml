@@ -1,11 +1,13 @@
-<suite name="Automation Suite">
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Automation Suite" verbose="2">
     <listeners>
         <listener class-name="io.qameta.allure.testng.AllureTestNg" />
     </listeners>
 
-    <test name="Lighthouse audit tests">
+    <test name="Lighthouse audit tests" preserve-order="true">
         <packages>
-            <package name="ge.tbc.testautomation"/>
+            <package name="ge.tbc.testautomation.*"/>
         </packages>
     </test>
 </suite>

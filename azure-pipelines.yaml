@@ -18,6 +18,12 @@ stages:
         timeoutInMinutes: 30
 
         steps:
+          # Install Node.js (needed for Allure report generation)
+          - task: NodeTool@0
+            displayName: 'Install Node.js'
+            inputs:
+              versionSpec: '18.x'
+
           # Install Java 17
           - task: JavaToolInstaller@0
             displayName: 'Install Java 17'
@@ -46,34 +52,67 @@ stages:
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
 
-          # Compile Project
+          # Install Playwright browsers (this will run during test-compile phase)
           - task: Maven@4
-            displayName: 'Compile Project'
+            displayName: 'Install Playwright Browsers'
             inputs:
               mavenPomFile: 'pom.xml'
-              goals: 'compile test-compile'
+              goals: 'test-compile'
               options: '$(MAVEN_OPTS)'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
+
+          # Debug: Check project structure and testng.xml
+          - script: |
+              echo "=== Current working directory ==="
+              pwd
+              echo "=== Project structure ==="
+              find . -name "*.java" -type f | head -10
+              echo "=== TestNG XML file ==="
+              if [ -f "testng.xml" ]; then
+                echo "testng.xml exists:"
+                cat testng.xml
+              else
+                echo "testng.xml NOT found!"
+                echo "Looking for TestNG files:"
+                find . -name "*testng*" -o -name "*test*.xml"
+              fi
+              echo "=== Maven test-compile check ==="
+              if [ -d "target/test-classes" ]; then
+                echo "Test classes compiled:"
+                find target/test-classes -name "*.class" | head -10
+              else
+                echo "No test classes found!"
+              fi
+            displayName: 'Debug: Check Project Structure'
 
           # Run Tests with TestNG XML
           - task: Maven@4
             displayName: 'Run Tests'
             inputs:
               mavenPomFile: 'pom.xml'
-              goals: 'clean test'
-              options: '$(MAVEN_OPTS) -DforkCount=1 -DreuseForks=false -DsuiteXmlFile=testng.xml -Dallure.results.directory=target/allure-results'
+              goals: 'test'
+              options: '$(MAVEN_OPTS) -DsuiteXmlFile=testng.xml -Dallure.results.directory=target/allure-results'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
 
-          # Debug: Check test results
+          # Debug: Check test results after execution
           - script: |
-              echo "=== Maven test results ==="
+              echo "=== Maven test execution results ==="
+              echo "Exit code from previous step: $?"
+              echo "=== Checking target directory ==="
+              if [ -d "target" ]; then
+                echo "Target directory contents:"
+                ls -la target/
+              else
+                echo "No target directory found!"
+              fi
+              echo "=== Surefire reports ==="
               if [ -d "target/surefire-reports" ]; then
                 echo "Surefire reports exist:"
                 ls -la target/surefire-reports/
-                echo "=== TestNG Results ==="
-                find target/surefire-reports -name "*.xml" -exec echo "Found: {}" \; -exec grep -c "test " {} \;
+                echo "=== XML files in surefire-reports ==="
+                find target/surefire-reports -name "*.xml" -exec echo "Found: {}" \; -exec head -5 {} \;
               else
                 echo "No surefire reports found"
               fi
@@ -86,19 +125,35 @@ stages:
               else
                 echo "No allure-results found"
               fi
+              echo "=== Check for any test execution logs ==="
+              if [ -f "target/surefire-reports/failsafe-summary.xml" ]; then
+                echo "Failsafe summary found"
+                cat target/surefire-reports/failsafe-summary.xml
+              fi
             displayName: 'Debug: Check Test Results'
+            condition: always()
+
+          # Publish Test Results (JUnit format)
+          - task: PublishTestResults@2
+            displayName: 'Publish JUnit Test Results'
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/surefire-reports/TEST-*.xml'
+              failTaskOnFailedTests: false
+              mergeTestResults: true
             condition: always()
 
           # Generate Allure Report from Allure results
           - script: |
-              if [ -d "$(Build.SourcesDirectory)/target/allure-results" ]; then
+              if [ -d "$(Build.SourcesDirectory)/target/allure-results" ] && [ "$(find $(Build.SourcesDirectory)/target/allure-results -type f | wc -l)" -gt 0 ]; then
+                echo "Found allure results, generating report..."
                 npm install -g allure-commandline
                 allure generate $(Build.SourcesDirectory)/target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
                 echo "Allure report generated successfully"
               else
-                echo "No allure-results directory found, skipping report generation"
+                echo "No allure-results directory found or it's empty, skipping report generation"
                 mkdir -p $(Build.ArtifactStagingDirectory)/allure-results
-                echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-results/no-results.txt
+                echo "No test results available - check test execution" > $(Build.ArtifactStagingDirectory)/allure-results/no-results.txt
               fi
             displayName: 'Generate Allure Report'
             condition: always()
@@ -112,11 +167,11 @@ stages:
               publishLocation: 'pipeline'
             condition: always()
 
-          # Publish Allure Report using the Azure DevOps extension
+          # Publish Allure Report using the Azure DevOps extension (only if results exist)
           - task: PublishAllureReport@1
             displayName: 'Publish Allure Report to Azure DevOps'
             inputs:
               allureVersion: '2.27.0'
               testResultsDir: '$(Build.SourcesDirectory)/target/allure-results'
-            condition: always()
+            condition: and(always(), eq(variables['Agent.JobStatus'], 'Succeeded'))
             continueOnError: true
