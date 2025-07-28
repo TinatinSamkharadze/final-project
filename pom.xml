@@ -79,7 +79,6 @@
                 </configuration>
             </plugin>
 
-
             <!-- Add this to your pom.xml <build><plugins> section -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
@@ -102,19 +101,20 @@
                     </execution>
                 </executions>
             </plugin>
-            <!-- Add Surefire plugin for better test execution -->
-            <!-- Replace your existing maven-surefire-plugin configuration with this -->
+
+            <!-- CORRECTED Surefire plugin configuration -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
+                    <!-- Use suiteXmlFiles instead of suiteXmlFile for newer versions -->
                     <suiteXmlFiles>
                         <suiteXmlFile>testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
                     <argLine>
                         -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
-                        -Dallure.results.directory=target/allure-results
+                        -Dallure.results.directory=${project.build.directory}/allure-results
                     </argLine>
                     <properties>
                         <property>
@@ -123,8 +123,13 @@
                         </property>
                     </properties>
                     <systemPropertyVariables>
-                        <allure.results.directory>target/allure-results</allure.results.directory>
+                        <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
                     </systemPropertyVariables>
+                    <!-- Add these for better debugging -->
+                    <useSystemClassLoader>false</useSystemClassLoader>
+                    <useManifestOnlyJar>false</useManifestOnlyJar>
+                    <forkCount>1</forkCount>
+                    <reuseForks>false</reuseForks>
                 </configuration>
                 <dependencies>
                     <dependency>
