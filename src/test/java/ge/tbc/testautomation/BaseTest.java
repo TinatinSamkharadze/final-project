@@ -8,6 +8,8 @@ import org.testng.asserts.SoftAssert;
 
 import java.util.Arrays;
 
+import static ge.tbc.testautomation.data.Constants.TBC_BANK_BASE_URL;
+
 public class BaseTest {
     public Playwright playwright;
     public Browser browser;
@@ -37,7 +39,7 @@ public class BaseTest {
         String ciEnv = System.getenv("CI");
         String headlessProperty = System.getProperty("headless");
         boolean isHeadless = "true".equals(ciEnv) || "true".equals(headlessProperty);
-        launchOptions.setHeadless(isHeadless);
+        launchOptions.setHeadless(true);
 
         if (browserType.equalsIgnoreCase("chromium")) {
             browser = playwright.chromium().launch(launchOptions);
@@ -64,7 +66,7 @@ public class BaseTest {
 
         // Set longer timeout for CI environments
         page.setDefaultTimeout(30000); // 30 seconds
-
+        page.navigate(TBC_BANK_BASE_URL);
         this.softAssert = new SoftAssert();
         this.homeSteps = new HomeSteps(page);
     }

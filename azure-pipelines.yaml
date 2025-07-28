@@ -18,27 +18,6 @@ stages:
         timeoutInMinutes: 30
 
         steps:
-          # Install Node.js
-          - task: NodeTool@0
-            displayName: 'Install Node.js'
-            inputs:
-              versionSpec: '18.x'
-
-          # Install Lighthouse CLI
-          - script: |
-              npm install -g lighthouse
-              lighthouse --version
-            displayName: 'Install Lighthouse CLI'
-
-          # Install Chrome Browser
-          - script: |
-              wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-              sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-              sudo apt-get update
-              sudo apt-get install -y google-chrome-stable
-              google-chrome --version
-            displayName: 'Install Chrome Browser'
-
           # Install Java 17
           - task: JavaToolInstaller@0
             displayName: 'Install Java 17'
@@ -67,12 +46,6 @@ stages:
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
 
-          # Create Lighthouse Reports Directory
-          - script: |
-              mkdir -p lighthouse-reports
-              chmod 755 lighthouse-reports
-            displayName: 'Create Lighthouse Reports Directory'
-
           # Compile Project
           - task: Maven@4
             displayName: 'Compile Project'
@@ -83,42 +56,18 @@ stages:
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
 
-          # FIXED: Run Lighthouse Performance Tests with TestNG XML
+          # Run Tests with TestNG XML
           - task: Maven@4
-            displayName: 'Run Lighthouse Performance Tests'
+            displayName: 'Run Tests'
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'clean test'
-              options: '$(MAVEN_OPTS) -Dheadless=true -DforkCount=1 -DreuseForks=false -DsuiteXmlFile=testng.xml -Dlighthouse.reports.dir=$(Build.SourcesDirectory)/lighthouse-reports -Dallure.results.directory=target/allure-results'
+              options: '$(MAVEN_OPTS) -DforkCount=1 -DreuseForks=false -DsuiteXmlFile=testng.xml -Dallure.results.directory=target/allure-results'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
-            env:
-              CI: 'true'
-              LIGHTHOUSE_PATH: 'lighthouse'
-              CHROME_PATH: '/usr/bin/google-chrome'
-              DISPLAY: ':99'
-              PLAYWRIGHT_BROWSERS_PATH: '0'
 
-          # Debug: Check lighthouse-reports directory and contents
+          # Debug: Check test results
           - script: |
-              echo "=== Current working directory ==="
-              pwd
-              echo "=== Listing project root ==="
-              ls -la .
-              echo "=== Checking lighthouse-reports directory ==="
-              if [ -d "lighthouse-reports" ]; then
-                echo "lighthouse-reports directory exists"
-                echo "Directory permissions:"
-                ls -ld lighthouse-reports
-                echo "Contents of lighthouse-reports:"
-                ls -la lighthouse-reports/
-                echo "File count in lighthouse-reports:"
-                find lighthouse-reports -type f | wc -l
-                echo "HTML files in lighthouse-reports:"
-                find lighthouse-reports -name "*.html" -type f
-              else
-                echo "lighthouse-reports directory does NOT exist"
-              fi
               echo "=== Maven test results ==="
               if [ -d "target/surefire-reports" ]; then
                 echo "Surefire reports exist:"
@@ -137,16 +86,7 @@ stages:
               else
                 echo "No allure-results found"
               fi
-            displayName: 'Debug: Check Test Configuration'
-            condition: always()
-
-          # Publish Lighthouse HTML Reports as Artifacts
-          - task: PublishBuildArtifacts@1
-            displayName: 'Publish Lighthouse Reports Artifact'
-            inputs:
-              pathToPublish: '$(Build.SourcesDirectory)/lighthouse-reports'
-              artifactName: 'lighthouse-reports'
-              publishLocation: 'Container'
+            displayName: 'Debug: Check Test Results'
             condition: always()
 
           # Generate Allure Report from Allure results
