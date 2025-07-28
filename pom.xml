@@ -14,8 +14,9 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <aspectj.version>1.9.24</aspectj.version>
         <maven-compiler-plugin.version>3.14.0</maven-compiler-plugin.version>
-        <maven-surefire-plugin.version>3.5.3</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>3.0.0</maven-surefire-plugin.version>
     </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.microsoft.playwright</groupId>
@@ -27,13 +28,11 @@
             <artifactId>testng</artifactId>
             <version>7.10.1</version>
         </dependency>
-        <!-- Replace your existing Allure dependencies with these (same versions) -->
         <dependency>
             <groupId>io.qameta.allure</groupId>
             <artifactId>allure-testng</artifactId>
-            <version>2.27.0</version> <!-- Changed to match allure-java-commons -->
+            <version>2.27.0</version>
         </dependency>
-
         <dependency>
             <groupId>io.qameta.allure</groupId>
             <artifactId>allure-java-commons</artifactId>
@@ -44,7 +43,6 @@
             <artifactId>jsoup</artifactId>
             <version>1.15.3</version>
         </dependency>
-
         <dependency>
             <groupId>org.aspectj</groupId>
             <artifactId>aspectjweaver</artifactId>
@@ -72,14 +70,14 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.13.0</version>
+                <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>17</source>  <!-- Match your Java version -->
-                    <target>17</target>  <!-- Match your Java version -->
+                    <source>17</source>
+                    <target>17</target>
                 </configuration>
             </plugin>
 
-            <!-- Add this to your pom.xml <build><plugins> section -->
+            <!-- Playwright browser installation -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>exec-maven-plugin</artifactId>
@@ -102,34 +100,20 @@
                 </executions>
             </plugin>
 
-            <!-- CORRECTED Surefire plugin configuration -->
+            <!-- SIMPLIFIED Surefire plugin - using older stable version -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${maven-surefire-plugin.version}</version>
                 <configuration>
-                    <!-- Use suiteXmlFiles instead of suiteXmlFile for newer versions -->
                     <suiteXmlFiles>
                         <suiteXmlFile>testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
-                    <argLine>
-                        -javaagent:"${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar"
-                        -Dallure.results.directory=${project.build.directory}/allure-results
-                    </argLine>
-                    <properties>
-                        <property>
-                            <name>listener</name>
-                            <value>io.qameta.allure.testng.AllureTestNg</value>
-                        </property>
-                    </properties>
                     <systemPropertyVariables>
-                        <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
+                        <allure.results.directory>target/allure-results</allure.results.directory>
                     </systemPropertyVariables>
-                    <!-- Add these for better debugging -->
-                    <useSystemClassLoader>false</useSystemClassLoader>
-                    <useManifestOnlyJar>false</useManifestOnlyJar>
-                    <forkCount>1</forkCount>
-                    <reuseForks>false</reuseForks>
+                    <!-- Simplified AspectJ weaver configuration -->
+                    <argLine>-javaagent:${settings.localRepository}/org/aspectj/aspectjweaver/${aspectj.version}/aspectjweaver-${aspectj.version}.jar</argLine>
                 </configuration>
                 <dependencies>
                     <dependency>
@@ -138,19 +122,6 @@
                         <version>${aspectj.version}</version>
                     </dependency>
                 </dependencies>
-            </plugin>
-
-            <plugin>
-                <groupId>io.qameta.allure</groupId>
-                <artifactId>allure-maven</artifactId>
-                <version>2.12.0</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>serve</goal>
-                        </goals>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

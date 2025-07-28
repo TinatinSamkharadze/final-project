@@ -99,7 +99,7 @@ stages:
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'clean test'
-              options: '$(MAVEN_OPTS) -Dallure.results.directory=target/allure-results -DforkCount=1 -DreuseForks=false -X'
+              options: '$(MAVEN_OPTS) -Dtest=ge.tbc.testautomation.LighthouseTests -Dallure.results.directory=target/allure-results'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
             timeoutInMinutes: 15
