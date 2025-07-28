@@ -81,8 +81,15 @@ stages:
               if [ -d "target/test-classes" ]; then
                 echo "Test classes compiled:"
                 find target/test-classes -name "*.class" | head -10
+                echo "=== Checking for test methods in compiled classes ==="
+                find target/test-classes -name "*.class" -exec echo "Class: {}" \; -exec javap -cp target/test-classes:{} {} 2>/dev/null | grep -E "(Test|@Test)" \; || true
               else
                 echo "No test classes found!"
+              fi
+              echo "=== Checking source test files ==="
+              if [ -d "src/test/java" ]; then
+                echo "Test source files:"
+                find src/test/java -name "*.java" -exec echo "File: {}" \; -exec grep -l "@Test" {} \; 2>/dev/null || echo "No @Test annotations found"
               fi
             displayName: 'Debug: Check Project Structure'
 
@@ -91,10 +98,11 @@ stages:
             displayName: 'Run Tests'
             inputs:
               mavenPomFile: 'pom.xml'
-              goals: 'test'
-              options: '$(MAVEN_OPTS) -DsuiteXmlFile=testng.xml -Dallure.results.directory=target/allure-results'
+              goals: 'clean test'
+              options: '$(MAVEN_OPTS) -DsuiteXmlFile=testng.xml -Dallure.results.directory=target/allure-results -DforkCount=1 -DreuseForks=false -X'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
+            timeoutInMinutes: 15
 
           # Debug: Check test results after execution
           - script: |
@@ -168,10 +176,19 @@ stages:
             condition: always()
 
           # Publish Allure Report using the Azure DevOps extension (only if results exist)
+          - script: |
+              if [ -d "$(Build.SourcesDirectory)/target/allure-results" ] && [ "$(find $(Build.SourcesDirectory)/target/allure-results -type f | wc -l)" -gt 0 ]; then
+                echo "##vso[task.setvariable variable=ALLURE_RESULTS_EXIST]true"
+              else
+                echo "##vso[task.setvariable variable=ALLURE_RESULTS_EXIST]false"
+              fi
+            displayName: 'Check if Allure Results Exist'
+            condition: always()
+
           - task: PublishAllureReport@1
             displayName: 'Publish Allure Report to Azure DevOps'
             inputs:
               allureVersion: '2.27.0'
               testResultsDir: '$(Build.SourcesDirectory)/target/allure-results'
-            condition: and(always(), eq(variables['Agent.JobStatus'], 'Succeeded'))
+            condition: and(always(), eq(variables['ALLURE_RESULTS_EXIST'], 'true'))
             continueOnError: true
