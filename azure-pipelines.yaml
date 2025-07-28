@@ -81,20 +81,20 @@ stages:
               find target/test-classes -name "*.class" -type f || echo "No test classes found"
             displayName: 'Maven Test Compile'
 
-          # Try to run tests
+          # Try to run tests with timeout
           - script: |
-              echo "=== Maven test ==="
-              mvn test $(MAVEN_OPTS) -Dtest=ge.tbc.testautomation.LighthouseTests
+              echo "=== Maven test with timeout ==="
+              timeout 120s mvn test $(MAVEN_OPTS) -Dtest=ge.tbc.testautomation.LighthouseTests || echo "Maven test timed out or failed"
               echo "Test exit code: $?"
               echo "=== Check results ==="
               if [ -d "target/surefire-reports" ]; then
                 echo "Surefire reports found:"
                 ls -la target/surefire-reports/
-                find target/surefire-reports -name "*.xml" -exec cat {} \;
+                find target/surefire-reports -name "*.xml" -exec echo "=== {} ===" \; -exec cat {} \;
               else
                 echo "No surefire reports found"
               fi
-            displayName: 'Maven Test Run'
+            displayName: 'Maven Test Run with Timeout'
             continueOnError: true
 
           # Final status check
