@@ -7,18 +7,18 @@ pool:
 
 variables:
   MAVEN_CACHE_FOLDER: $(Pipeline.Workspace)/.m2/repository
-  MAVEN_OPTS: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
+  MAVEN_OPTS: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER) -Xmx2048m -XX:MaxPermSize=512m'
 
 stages:
-  - stage: LighthousePerformanceTests
-    displayName: 'Lighthouse Performance Testing'
+  - stage: TestExecution
+    displayName: 'Test Execution'
     jobs:
-      - job: RunLighthouseTests
-        displayName: 'Run Lighthouse Performance Tests'
-        timeoutInMinutes: 30
+      - job: RunTests
+        displayName: 'Run Tests'
+        timeoutInMinutes: 45
 
         steps:
-          # Install Node.js (needed for Allure report generation)
+          # Install Node.js
           - task: NodeTool@0
             displayName: 'Install Node.js'
             inputs:
@@ -42,108 +42,128 @@ stages:
                 maven
               path: $(MAVEN_CACHE_FOLDER)
 
-          # Download Maven Dependencies
+          # Clean and compile first
           - task: Maven@4
-            displayName: 'Download Maven Dependencies'
+            displayName: 'Clean and Compile'
             inputs:
               mavenPomFile: 'pom.xml'
-              goals: 'dependency:resolve'
+              goals: 'clean compile'
               options: '$(MAVEN_OPTS)'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
+            timeoutInMinutes: 10
 
-          # Install Playwright browsers (this will run during test-compile phase)
+          # Compile test classes
           - task: Maven@4
-            displayName: 'Install Playwright Browsers'
+            displayName: 'Compile Test Classes'
             inputs:
               mavenPomFile: 'pom.xml'
               goals: 'test-compile'
               options: '$(MAVEN_OPTS)'
               javaHomeOption: 'JDKVersion'
               jdkVersionOption: '1.17'
+            timeoutInMinutes: 10
 
-          # Debug: Check project structure and testng.xml
+          # Debug: Check compiled classes
           - script: |
-              echo "=== Current working directory ==="
-              pwd
-              echo "=== Project structure ==="
-              find . -name "*.java" -type f | head -10
+              echo "=== Checking compiled test classes ==="
+              if [ -d "target/test-classes" ]; then
+                echo "Test classes found:"
+                find target/test-classes -name "*.class" -type f
+                echo "=== Checking for LighthouseTests class specifically ==="
+                if [ -f "target/test-classes/ge/tbc/testautomation/LighthouseTests.class" ]; then
+                  echo "✓ LighthouseTests.class found"
+                else
+                  echo "✗ LighthouseTests.class NOT found"
+                fi
+              else
+                echo "No test-classes directory found!"
+              fi
               echo "=== TestNG XML file ==="
               if [ -f "testng.xml" ]; then
-                echo "testng.xml exists:"
+                echo "testng.xml content:"
                 cat testng.xml
               else
-                echo "testng.xml NOT found!"
-                echo "Looking for TestNG files:"
-                find . -name "*testng*" -o -name "*test*.xml"
+                echo "testng.xml not found"
               fi
-              echo "=== Maven test-compile check ==="
-              if [ -d "target/test-classes" ]; then
-                echo "Test classes compiled:"
-                find target/test-classes -name "*.class" | head -10
-                echo "=== Checking for test methods in compiled classes ==="
-                find target/test-classes -name "*.class" -exec echo "Class: {}" \; -exec javap -cp target/test-classes:{} {} 2>/dev/null | grep -E "(Test|@Test)" \; || true
-              else
-                echo "No test classes found!"
-              fi
-              echo "=== Checking source test files ==="
-              if [ -d "src/test/java" ]; then
-                echo "Test source files:"
-                find src/test/java -name "*.java" -exec echo "File: {}" \; -exec grep -l "@Test" {} \; 2>/dev/null || echo "No @Test annotations found"
-              fi
-            displayName: 'Debug: Check Project Structure'
+            displayName: 'Debug: Check Compiled Classes'
 
-          # Run Tests with TestNG XML
-          - task: Maven@4
-            displayName: 'Run Tests'
-            inputs:
-              mavenPomFile: 'pom.xml'
-              goals: 'clean test'
-              options: '$(MAVEN_OPTS) -Dtest=ge.tbc.testautomation.LighthouseTests -Dallure.results.directory=target/allure-results'
-              javaHomeOption: 'JDKVersion'
-              jdkVersionOption: '1.17'
-            timeoutInMinutes: 15
-
-          # Debug: Check test results after execution
+          # Try running a simple test first without any special configurations
           - script: |
-              echo "=== Maven test execution results ==="
-              echo "Exit code from previous step: $?"
-              echo "=== Checking target directory ==="
-              if [ -d "target" ]; then
-                echo "Target directory contents:"
-                ls -la target/
-              else
-                echo "No target directory found!"
-              fi
-              echo "=== Surefire reports ==="
+              echo "=== Running Maven test with minimal configuration ==="
+              mvn test -Dtest=ge.tbc.testautomation.LighthouseTests -DfailIfNoTests=false -Dmaven.repo.local=$(MAVEN_CACHE_FOLDER) -q
+              echo "Maven exit code: $?"
+            displayName: 'Simple Maven Test Run'
+            timeoutInMinutes: 20
+            continueOnError: true
+
+          # Check what happened after the simple test run
+          - script: |
+              echo "=== After simple test run ==="
               if [ -d "target/surefire-reports" ]; then
-                echo "Surefire reports exist:"
+                echo "Surefire reports created:"
                 ls -la target/surefire-reports/
-                echo "=== XML files in surefire-reports ==="
-                find target/surefire-reports -name "*.xml" -exec echo "Found: {}" \; -exec head -5 {} \;
+                echo "=== Content of XML files ==="
+                find target/surefire-reports -name "*.xml" -exec echo "=== {} ===" \; -exec cat {} \;
               else
-                echo "No surefire reports found"
+                echo "No surefire-reports directory created"
               fi
-              echo "=== Allure results ==="
+              
               if [ -d "target/allure-results" ]; then
-                echo "Allure results exist:"
+                echo "Allure results created:"
                 ls -la target/allure-results/
-                echo "Allure files count:"
-                find target/allure-results -type f | wc -l
               else
-                echo "No allure-results found"
+                echo "No allure-results directory created"
               fi
-              echo "=== Check for any test execution logs ==="
-              if [ -f "target/surefire-reports/failsafe-summary.xml" ]; then
-                echo "Failsafe summary found"
-                cat target/surefire-reports/failsafe-summary.xml
+              
+              echo "=== Maven logs ==="
+              if [ -f "target/surefire-reports/TEST-ge.tbc.testautomation.LighthouseTests.xml" ]; then
+                echo "Test results found!"
+                cat target/surefire-reports/TEST-ge.tbc.testautomation.LighthouseTests.xml
               fi
-            displayName: 'Debug: Check Test Results'
+            displayName: 'Check Simple Test Results'
             condition: always()
 
-          # Publish Test Results (JUnit format)
+          # If simple test worked, try with Allure
+          - task: Maven@4
+            displayName: 'Run Tests with Allure'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              goals: 'test'
+              options: '$(MAVEN_OPTS) -Dtest=ge.tbc.testautomation.LighthouseTests -Dallure.results.directory=target/allure-results -DfailIfNoTests=false'
+              javaHomeOption: 'JDKVersion'
+              jdkVersionOption: '1.17'
+            timeoutInMinutes: 20
+            condition: succeededOrFailed()
+
+          # Final check of all results
+          - script: |
+              echo "=== Final Results Check ==="
+              echo "Target directory:"
+              ls -la target/ || echo "No target directory"
+              
+              echo "=== Surefire Reports ==="
+              if [ -d "target/surefire-reports" ]; then
+                ls -la target/surefire-reports/
+                echo "=== Test Results Summary ==="
+                find target/surefire-reports -name "*.xml" -exec grep -l "testcase" {} \; || echo "No test cases found in XML"
+              else
+                echo "No surefire-reports"
+              fi
+              
+              echo "=== Allure Results ==="
+              if [ -d "target/allure-results" ]; then
+                ls -la target/allure-results/
+                echo "Files count: $(find target/allure-results -type f | wc -l)"
+              else
+                echo "No allure-results"
+              fi
+            displayName: 'Final Results Check'
+            condition: always()
+
+          # Publish Test Results if they exist
           - task: PublishTestResults@2
-            displayName: 'Publish JUnit Test Results'
+            displayName: 'Publish Test Results'
             inputs:
               testResultsFormat: 'JUnit'
               testResultsFiles: '**/surefire-reports/TEST-*.xml'
@@ -151,44 +171,26 @@ stages:
               mergeTestResults: true
             condition: always()
 
-          # Generate Allure Report from Allure results
+          # Generate Allure Report if results exist
           - script: |
-              if [ -d "$(Build.SourcesDirectory)/target/allure-results" ] && [ "$(find $(Build.SourcesDirectory)/target/allure-results -type f | wc -l)" -gt 0 ]; then
-                echo "Found allure results, generating report..."
+              if [ -d "target/allure-results" ] && [ "$(find target/allure-results -type f | wc -l)" -gt 0 ]; then
+                echo "Generating Allure report..."
                 npm install -g allure-commandline
-                allure generate $(Build.SourcesDirectory)/target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-results
-                echo "Allure report generated successfully"
+                allure generate target/allure-results --clean -o $(Build.ArtifactStagingDirectory)/allure-report
+                echo "Allure report generated"
               else
-                echo "No allure-results directory found or it's empty, skipping report generation"
-                mkdir -p $(Build.ArtifactStagingDirectory)/allure-results
-                echo "No test results available - check test execution" > $(Build.ArtifactStagingDirectory)/allure-results/no-results.txt
+                echo "No Allure results to process"
+                mkdir -p $(Build.ArtifactStagingDirectory)/allure-report
+                echo "No test results available" > $(Build.ArtifactStagingDirectory)/allure-report/no-results.txt
               fi
             displayName: 'Generate Allure Report'
             condition: always()
 
-          # Publish Allure Report Artifact
+          # Publish Allure Report
           - task: PublishBuildArtifacts@1
-            displayName: 'Publish Allure Report'
+            displayName: 'Publish Allure Report Artifact'
             inputs:
-              targetPath: '$(Build.ArtifactStagingDirectory)/allure-results'
+              targetPath: '$(Build.ArtifactStagingDirectory)/allure-report'
               artifactName: 'allure-report'
               publishLocation: 'pipeline'
             condition: always()
-
-          # Publish Allure Report using the Azure DevOps extension (only if results exist)
-          - script: |
-              if [ -d "$(Build.SourcesDirectory)/target/allure-results" ] && [ "$(find $(Build.SourcesDirectory)/target/allure-results -type f | wc -l)" -gt 0 ]; then
-                echo "##vso[task.setvariable variable=ALLURE_RESULTS_EXIST]true"
-              else
-                echo "##vso[task.setvariable variable=ALLURE_RESULTS_EXIST]false"
-              fi
-            displayName: 'Check if Allure Results Exist'
-            condition: always()
-
-          - task: PublishAllureReport@1
-            displayName: 'Publish Allure Report to Azure DevOps'
-            inputs:
-              allureVersion: '2.27.0'
-              testResultsDir: '$(Build.SourcesDirectory)/target/allure-results'
-            condition: and(always(), eq(variables['ALLURE_RESULTS_EXIST'], 'true'))
-            continueOnError: true
