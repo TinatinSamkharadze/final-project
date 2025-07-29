@@ -2,20 +2,30 @@ package ge.tbc.testautomation.data;
 
 public class Constants {
     public static final String TBC_BANK_BASE_URL = "https://tbcbank.ge/ka",
-    TBC_BANK_TREASURY_PRODUCTS_PAGE_URL = "https://tbcbank.ge/ka/treasury-products",
-    TBC_BANK_LOANS_PAGE_URL = "https://tbcbank.ge/ka/loans",
-    TBC_BANK_ATMS_AND_BRANCHES_PAGE_URL = "https://tbcbank.ge/ka/atms&branches",
-    PERFORMANCE = "performance",
-    ACCESSIBILITY = "accessibility",
-    BEST_PRACTICES = "best-practices",
-    SEO = "seo",
-    HOME_PAGE_AUDIT = "HomePageAudit",
-    LOANS_PAGE_AUDIT = "LoansPageAudit",
-    TREASURY_PRODUCTS_PAGE_AUDIT = "TreasuryProductsPageAudit",
+            TBC_BANK_TREASURY_PRODUCTS_PAGE_URL = "https://tbcbank.ge/ka/treasury-products",
+            TBC_BANK_LOANS_PAGE_URL = "https://tbcbank.ge/ka/loans",
+            TBC_BANK_ATMS_AND_BRANCHES_PAGE_URL = "https://tbcbank.ge/ka/atms&branches",
+            PERFORMANCE = "performance",
+            ACCESSIBILITY = "accessibility",
+            BEST_PRACTICES = "best-practices",
+            SEO = "seo",
+            HOME_PAGE_AUDIT = "HomePageAudit",
+            LOANS_PAGE_AUDIT = "LoansPageAudit",
+            TREASURY_PRODUCTS_PAGE_AUDIT = "TreasuryProductsPageAudit",
             FIRST_CONTENTFUL_PAINT = "first-contentful-paint",
             LARGEST_CONTENTFUL_PAINT = "largest-contentful-paint",
             TIME_TO_INTERACTIVE = "time-to-interactive",
-            COMULATIVE_LAYOUT_SHIFT = "cumulative-layout-shift";
+            COMULATIVE_LAYOUT_SHIFT = "cumulative-layout-shift",
+            RUNNING_AUDIT = "Running Lighthouse audit for: {} (Desktop) - {}",
+            LIGHTHOUSE_COMMAND = "Lighthouse command: {}",
+            REPORT_GENERATED = "Lighthouse HTML report generated: {}",
+            REPORT_FILE_SIZE = "Report file size: {} bytes",
+            AUDIT_FAILED = "Lighthouse audit failed: {}",
+            REPORT_NOT_CREATED = "Report file was not created or is empty",
+            AUDIT_TIMED_OUT = "Lighthouse audit timed out after {} seconds",
+            ATTACH_REPORT = "Lighthouse report attached to Allure: {}",
+            FAILED_TO_ATTACH_REPORT = "Failed to attach Lighthouse report to Allure: {}",
+            PARSE_SCORE_FAILED = "Failed to parse Lighthouse score for category {}: {}";
 
     public static final int MIN_PERFORMANCE_SCORE = 45,
             MIN_ACCESSIBILITY_SCORE = 50,
@@ -23,7 +33,7 @@ public class Constants {
             MIN_SEO_SCORE = 90,
             MAX_FCP_TIME = 1800,
             MAX_LCP_TIME = 2500,
-            MAX_TTI_TIME = 5000; // Maximum TTI time in milliseconds (5 seconds)
+            MAX_TTI_TIME = 5000;
     public static final double MAX_CLS_VALUE = 0.1;
 
     public static final int WIDTH_FOR_DESKTOP = 1920,

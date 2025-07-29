@@ -1,131 +1,90 @@
 package ge.tbc.testautomation;
 
-import io.qameta.allure.Epic;
-import io.qameta.allure.Feature;
-import org.testng.Assert;
+import ge.tbc.testautomation.lighthouseutils.LighthouseUtils;
+import io.qameta.allure.*;
 import org.testng.annotations.Test;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static ge.tbc.testautomation.data.Constants.*;
+import static ge.tbc.testautomation.lighthouseutils.LighthouseUtils.*;
 
 @Epic("Performance Testing")
 @Feature("Lighthouse Audit Reports")
-public class LighthouseTests  {
+public class LighthouseTests extends BaseTest {
 
-//    @Description("Home Page Performance audit by lighthouse")
-//    @Severity(SeverityLevel.CRITICAL)
-//    @Test
-//    public void testHomePagePerformance() {
-//        page.navigate(TBC_BANK_BASE_URL);
-//        String reportPath = LighthouseUtils.runPerformanceAudit(page.url(), HOME_PAGE_AUDIT);
-//        int performanceScore = getSpecificScore(reportPath, PERFORMANCE);
-//        int accessibilityScore = getSpecificScore(reportPath, ACCESSIBILITY);
-//        int bestPracticesScore = getSpecificScore(reportPath, BEST_PRACTICES);
-//        int seoScore = getSpecificScore(reportPath, SEO);
-//
-////        int fcp = getSpecificScore(reportPath, FIRST_CONTENTFUL_PAINT);
-////        int lcp = getSpecificScore(reportPath, LARGEST_CONTENTFUL_PAINT);
-////        int tti = getSpecificScore(reportPath, TIME_TO_INTERACTIVE);
-////        double cls = getSpecificScore(reportPath, COMULATIVE_LAYOUT_SHIFT);
-//        softAssert.assertTrue(performanceScore >= MIN_PERFORMANCE_SCORE);
-//        softAssert.assertTrue(accessibilityScore > MIN_ACCESSIBILITY_SCORE);
-//        softAssert.assertTrue(bestPracticesScore > MIN_BEST_PRACTICES_SCORE);
-//        softAssert.assertTrue(seoScore > MIN_SEO_SCORE);
-//
-////        softAssert.assertTrue(fcp <= MAX_FCP_TIME);
-////        softAssert.assertTrue(lcp <= MAX_LCP_TIME);
-////        softAssert.assertTrue(tti <= MAX_TTI_TIME);
-////        softAssert.assertTrue(cls <= MAX_CLS_VALUE);
-//
-//    }
-//
-//
-//    @Description("Treasury Products Page Performance audit by lighthouse")
-//    @Severity(SeverityLevel.CRITICAL)
-//    @Test
-//    public void testTreasuryProductsPagePerformance() {
-//        page.navigate(TBC_BANK_TREASURY_PRODUCTS_PAGE_URL);
-//        String reportPath = LighthouseUtils.runPerformanceAudit(page.url(), TREASURY_PRODUCTS_PAGE_AUDIT);
-//        int performanceScore = getSpecificScore(reportPath, PERFORMANCE);
-//        int accessibilityScore = getSpecificScore(reportPath, ACCESSIBILITY);
-//        int bestPracticesScore = getSpecificScore(reportPath, BEST_PRACTICES);
-//        int seoScore = getSpecificScore(reportPath, SEO);
-////
-////        int fcp = getSpecificScore(reportPath, FIRST_CONTENTFUL_PAINT);
-////        int lcp = getSpecificScore(reportPath, LARGEST_CONTENTFUL_PAINT);
-////        int tti = getSpecificScore(reportPath, TIME_TO_INTERACTIVE);
-////        double cls = getSpecificScore(reportPath, COMULATIVE_LAYOUT_SHIFT);
-//        softAssert.assertTrue(performanceScore >= MIN_PERFORMANCE_SCORE);
-//        softAssert.assertTrue(accessibilityScore > MIN_ACCESSIBILITY_SCORE);
-//        softAssert.assertTrue(bestPracticesScore > MIN_BEST_PRACTICES_SCORE);
-//        softAssert.assertTrue(seoScore > MIN_SEO_SCORE);
-////
-////        softAssert.assertTrue(fcp <= MAX_FCP_TIME);
-////        softAssert.assertTrue(lcp <= MAX_LCP_TIME);
-////        softAssert.assertTrue(tti <= MAX_TTI_TIME);
-////        softAssert.assertTrue(cls <= MAX_CLS_VALUE);
-//
-//    }
-//
-//
-//    @Description("Loans Page Performance audit by lighthouse")
-//    @Severity(SeverityLevel.CRITICAL)
-//    @Test
-//    public void testLoansPagePerformance() {
-//        page.navigate(TBC_BANK_LOANS_PAGE_URL);
-//        String reportPath = LighthouseUtils.runPerformanceAudit(page.url(), LOANS_PAGE_AUDIT);
-//        int performanceScore = getSpecificScore(reportPath, PERFORMANCE);
-//        int accessibilityScore = getSpecificScore(reportPath, ACCESSIBILITY);
-//        int bestPracticesScore = getSpecificScore(reportPath, BEST_PRACTICES);
-//        int seoScore = getSpecificScore(reportPath, SEO);
-//
-////        int fcp = getSpecificScore(reportPath, FIRST_CONTENTFUL_PAINT);
-////        int lcp = getSpecificScore(reportPath, LARGEST_CONTENTFUL_PAINT);
-////        int tti = getSpecificScore(reportPath, TIME_TO_INTERACTIVE);
-////        double cls = getSpecificScore(reportPath, COMULATIVE_LAYOUT_SHIFT);
-//        softAssert.assertTrue(performanceScore >= MIN_PERFORMANCE_SCORE);
-//        softAssert.assertTrue(accessibilityScore > MIN_ACCESSIBILITY_SCORE);
-//        softAssert.assertTrue(bestPracticesScore > MIN_BEST_PRACTICES_SCORE);
-//        softAssert.assertTrue(seoScore > MIN_SEO_SCORE);
-////
-////        softAssert.assertTrue(fcp <= MAX_FCP_TIME);
-////        softAssert.assertTrue(lcp <= MAX_LCP_TIME);
-////        softAssert.assertTrue(tti <= MAX_TTI_TIME);
-////        softAssert.assertTrue(cls <= MAX_CLS_VALUE);
+    private static final Map<String, String> reportPaths = new HashMap<>();
 
-//    }
-
-//    @Description("Validate currency table's default state")
-//    @Test
-//    public void validateTreasuryProductsPage()
-//    {
-//
-//        homeSteps
-//                .hoverOverForMyself()
-//                .clickOnCurrencyRates()
-//                .verifyTreasuryPageLoadsWithin3Seconds()
-//                .verifyDefaultCommercialTabActive()
-//                .validateCurrencyTableHasCurrencies()
-//                .validateCurrencyTableIsVisible();
-//    }
-
-    @Test
-    public void basicTest() {
-        System.out.println("=== Starting basic test ===");
-
-        // Just a simple test to verify TestNG is working
-        String testString = "Hello World";
-        Assert.assertNotNull(testString, "Test string should not be null");
-        Assert.assertEquals(testString, "Hello World", "String should match");
-
-        System.out.println("=== Basic test completed successfully ===");
+    @Test(priority = 1)
+    @Story("(CPG-T28): Lighthouse Performance Audit for Home Page")
+    @Description("Run Lighthouse on the Home Page")
+    @Owner("Tinatin Samkharadze")
+    @Link(TBC_BANK_BASE_URL)
+    @Severity(SeverityLevel.CRITICAL)
+    public void runHomePageAudit() {
+        page.navigate(TBC_BANK_BASE_URL);
+        String reportPath = LighthouseUtils.runPerformanceAudit(page.url(), HOME_PAGE_AUDIT);
+        reportPaths.put("home", reportPath);
+        assertReportNotNull(reportPath, "Home Page");
     }
 
-    @Test
-    public void simpleCalculationTest() {
-        System.out.println("=== Starting calculation test ===");
-
-        int result = 2 + 2;
-        Assert.assertEquals(result, 4, "2 + 2 should equal 4");
-
-        System.out.println("=== Calculation test completed successfully ===");
+    @Test(priority = 2)
+    @Story("(CPG-T28): Lighthouse Performance Audit for Home Page")
+    @Description("Validate Lighthouse metrics for Home Page against thresholds")
+    @Owner("Tinatin Samkharadze")
+    @Link(TBC_BANK_BASE_URL)
+    @Severity(SeverityLevel.CRITICAL)
+    public void validateHomePageMetrics() {
+        String reportPath = reportPaths.get("home");
+        validateScores(reportPath, "Home Page", softAssert);
     }
 
+    @Test(priority = 3)
+    @Story("(CPG-T29): Lighthouse Performance Audit for Loans Page")
+    @Description("Run Lighthouse on the Loans Page")
+    @Owner("Tinatin Samkharadze")
+    @Link(TBC_BANK_LOANS_PAGE_URL)
+    @Severity(SeverityLevel.CRITICAL)
+    public void runLoansPageAudit() {
+        page.navigate(TBC_BANK_LOANS_PAGE_URL);
+        String reportPath = LighthouseUtils.runPerformanceAudit(page.url(), LOANS_PAGE_AUDIT);
+        reportPaths.put("loans", reportPath);
+        assertReportNotNull(reportPath, "Loans Page");
+    }
+
+    @Test(priority = 4)
+    @Story("(CPG-T29): Lighthouse Performance Audit for Loans Page")
+    @Description("Validate Lighthouse metrics for Loans Page against thresholds")
+    @Owner("Tinatin Samkharadze")
+    @Link(TBC_BANK_LOANS_PAGE_URL)
+    @Severity(SeverityLevel.CRITICAL)
+    public void validateLoansPageMetrics() {
+        String reportPath = reportPaths.get("loans");
+        validateScores(reportPath, "Loans Page", softAssert);
+    }
+
+    @Test(priority = 5)
+    @Story("(CPG-T30): Lighthouse Performance Audit for Treasury Products Page")
+    @Description("Run Lighthouse on the Treasury Products Page")
+    @Owner("Tinatin Samkharadze")
+    @Link(TBC_BANK_TREASURY_PRODUCTS_PAGE_URL)
+    @Severity(SeverityLevel.CRITICAL)
+    public void runTreasuryProductsPageAudit() {
+        page.navigate(TBC_BANK_TREASURY_PRODUCTS_PAGE_URL);
+        String reportPath = LighthouseUtils.runPerformanceAudit(page.url(), TREASURY_PRODUCTS_PAGE_AUDIT);
+        reportPaths.put("treasury", reportPath);
+        assertReportNotNull(reportPath, "Treasury Products Page");
+    }
+
+    @Test(priority = 6)
+    @Story("(CPG-T30): Lighthouse Performance Audit for Treasury Products Page")
+    @Description("Validate Lighthouse metrics for Treasury Products Page against thresholds")
+    @Owner("Tinatin Samkharadze")
+    @Link(TBC_BANK_TREASURY_PRODUCTS_PAGE_URL)
+    @Severity(SeverityLevel.CRITICAL)
+    public void validateTreasuryProductsPageMetrics() {
+        String reportPath = reportPaths.get("treasury");
+        validateScores(reportPath, "Treasury Products Page", softAssert);
+    }
 }
