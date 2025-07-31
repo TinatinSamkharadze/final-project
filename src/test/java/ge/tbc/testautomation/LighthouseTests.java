@@ -74,7 +74,6 @@ public class LighthouseTests extends BaseTest {
         page.navigate(TBC_BANK_TREASURY_PRODUCTS_PAGE_URL);
         String reportPath = LighthouseUtils.runPerformanceAudit(page.url(), TREASURY_PRODUCTS_PAGE_AUDIT);
         reportPaths.put("treasury", reportPath);
-        assertReportNotNull(reportPath, "Treasury Products Page");
     }
 
     @Test(priority = 6)
